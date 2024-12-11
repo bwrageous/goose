@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use super::base::{Provider, Usage};
+use super::configs::ProviderModelConfig;
 use super::configs::{AnthropicProviderConfig, ModelConfig};
 use crate::models::content::{Content, TextContent};
 use crate::models::message::{Message, MessageContent};
