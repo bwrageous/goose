@@ -14,9 +14,7 @@ use crate::systems::{Resource, System};
 use crate::token_counter::TokenCounter;
 use serde::Serialize;
 
-const CONTEXT_LIMIT: usize = 200_000; // TODO: model's context limit should be in provider config
 const ESTIMATE_FACTOR: f32 = 0.8;
-const ESTIMATED_TOKEN_LIMIT: usize = (CONTEXT_LIMIT as f32 * ESTIMATE_FACTOR) as usize;
 
 #[derive(Clone, Debug, Serialize)]
 struct SystemInfo {
@@ -69,6 +67,11 @@ impl Agent {
     /// Add a system to the agent
     pub fn add_system(&mut self, system: Box<dyn System>) {
         self.systems.push(system);
+    }
+
+    /// Get the context limit from the provider's configuration
+    fn get_context_limit(&self) -> usize {
+        self.provider.get_model_config().get_context_limit()
     }
 
     /// Get all tools from all systems with proper system prefixing
@@ -200,7 +203,7 @@ impl Agent {
             &messages,
             &tools,
             &resources,
-            Some("gpt-4"),
+            Some(&self.provider.get_model_config().model_name),
         );
 
         let mut status_content: Vec<String> = Vec::new();
@@ -215,7 +218,9 @@ impl Agent {
             for (system_name, resources) in &resource_content {
                 let mut resource_counts = HashMap::new();
                 for (uri, (_resource, content)) in resources {
-                    let token_count = token_counter.count_tokens(&content, Some("gpt-4")) as u32;
+                    let token_count = token_counter
+                        .count_tokens(&content, Some(&self.provider.get_model_config().model_name))
+                        as u32;
                     resource_counts.insert(uri.clone(), token_count);
                 }
                 system_token_counts.insert(system_name.clone(), resource_counts);
@@ -313,6 +318,8 @@ impl Agent {
         let mut messages = messages.to_vec();
         let tools = self.get_prefixed_tools();
         let system_prompt = self.get_system_prompt()?;
+        let context_limit = self.get_context_limit();
+        let estimated_limit = (context_limit as f32 * ESTIMATE_FACTOR) as usize;
 
         // Update conversation history for the start of the reply
         messages = self
@@ -321,7 +328,7 @@ impl Agent {
                 &tools,
                 &messages,
                 &Vec::new(),
-                ESTIMATED_TOKEN_LIMIT,
+                estimated_limit,
             )
             .await?;
 
@@ -381,7 +388,7 @@ impl Agent {
                 messages.pop();
 
                 let pending = vec![response, message_tool_response];
-                messages = self.prepare_inference(&system_prompt, &tools, &messages, &pending, ESTIMATED_TOKEN_LIMIT).await?;
+                messages = self.prepare_inference(&system_prompt, &tools, &messages, &pending, estimated_limit).await?;
             }
         }))
     }
