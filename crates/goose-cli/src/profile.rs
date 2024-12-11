@@ -72,19 +72,19 @@ pub fn has_no_profiles() -> Result<bool> {
 }
 
 pub fn get_provider_config(provider_name: &str, model: String) -> ProviderConfig {
+    let model_config = ModelConfig::new(model);
+
     match provider_name.to_lowercase().as_str() {
         "openai" => {
             // TODO error propagation throughout the CLI
             let api_key = get_keyring_secret("OPENAI_API_KEY", KeyRetrievalStrategy::Both)
                 .expect("OPENAI_API_KEY not available in env or the keychain\nSet an env var or rerun `goose configure`");
 
-            ProviderConfig::OpenAi(OpenAiProviderConfig {
-                host: "https://api.openai.com".to_string(),
+            ProviderConfig::OpenAi(OpenAiProviderConfig::new(
+                "https://api.openai.com".to_string(),
                 api_key,
-                model,
-                temperature: None,
-                max_tokens: None,
-            })
+                model_config.model_name,
+            ))
         }
         "databricks" => {
             let host = get_keyring_secret("DATABRICKS_HOST", KeyRetrievalStrategy::Both)
@@ -94,21 +94,18 @@ pub fn get_provider_config(provider_name: &str, model: String) -> ProviderConfig
                 host: host.clone(),
                 // TODO revisit configuration
                 auth: DatabricksAuth::oauth(host),
-                model,
-                temperature: None,
-                max_tokens: None,
+                model: model_config,
                 image_format: goose::providers::utils::ImageFormat::Anthropic,
             })
         }
         "ollama" => {
             let host = get_keyring_secret("OLLAMA_HOST", KeyRetrievalStrategy::Both)
                 .expect("OLLAMA_HOST not available in env or the keychain\nSet an env var or rerun `goose configure`");
-            ProviderConfig::Ollama(OllamaProviderConfig {
-                host: host.clone(),
-                model,
-                temperature: None,
-                max_tokens: None,
-            })
+
+            ProviderConfig::Ollama(OllamaProviderConfig::new(
+                host.clone(),
+                model_config.model_name,
+            ))
         }
         "anthropic" => {
             let api_key = get_keyring_secret("ANTHROPIC_API_KEY", KeyRetrievalStrategy::Both)
@@ -117,9 +114,7 @@ pub fn get_provider_config(provider_name: &str, model: String) -> ProviderConfig
             ProviderConfig::Anthropic(AnthropicProviderConfig {
                 host: "https://api.anthropic.com".to_string(), // Default Anthropic API endpoint
                 api_key,
-                model,
-                temperature: None,
-                max_tokens: None,
+                model_config.model_name,
             })
         }
         _ => panic!("Invalid provider name"),

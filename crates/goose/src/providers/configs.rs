@@ -39,20 +39,20 @@ impl ModelConfig {
     }
 
     /// Set an explicit context limit
-    pub fn with_context_limit(mut self, limit: usize) -> Self {
-        self.context_limit = Some(limit);
+    pub fn with_context_limit(mut self, limit: Option<usize>) -> Self {
+        self.context_limit = limit;
         self
     }
 
     /// Set the temperature
-    pub fn with_temperature(mut self, temp: f32) -> Self {
-        self.temperature = Some(temp);
+    pub fn with_temperature(mut self, temp: Option<f32>) -> Self {
+        self.temperature = temp;
         self
     }
 
     /// Set the max tokens
-    pub fn with_max_tokens(mut self, tokens: i32) -> Self {
-        self.max_tokens = Some(tokens);
+    pub fn with_max_tokens(mut self, tokens: Option<i32>) -> Self {
+        self.max_tokens = tokens;
         self
     }
 
@@ -240,7 +240,8 @@ mod tests {
     #[test]
     fn test_model_config_context_limits() {
         // Test explicit limit
-        let config = ModelConfig::new("claude-3-opus".to_string()).with_context_limit(150_000);
+        let config =
+            ModelConfig::new("claude-3-opus".to_string()).with_context_limit(Some(150_000));
         assert_eq!(config.get_context_limit(), 150_000);
 
         // Test model-specific defaults
@@ -270,7 +271,10 @@ mod tests {
             "test-key".to_string(),
             "claude-3-opus".to_string(),
         );
-        let model_config = config.model_config().clone().with_context_limit(150_000);
+        let model_config = config
+            .model_config()
+            .clone()
+            .with_context_limit(Some(150_000));
         assert_eq!(model_config.get_context_limit(), 150_000);
     }
 
@@ -289,16 +293,19 @@ mod tests {
             "test-key".to_string(),
             "gpt-4-turbo".to_string(),
         );
-        let model_config = config.model_config().clone().with_context_limit(150_000);
+        let model_config = config
+            .model_config()
+            .clone()
+            .with_context_limit(Some(150_000));
         assert_eq!(model_config.get_context_limit(), 150_000);
     }
 
     #[test]
     fn test_model_config_settings() {
         let config = ModelConfig::new("test-model".to_string())
-            .with_temperature(0.7)
-            .with_max_tokens(1000)
-            .with_context_limit(50_000);
+            .with_temperature(Some(0.7))
+            .with_max_tokens(Some(1000))
+            .with_context_limit(Some(50_000));
 
         assert_eq!(config.temperature, Some(0.7));
         assert_eq!(config.max_tokens, Some(1000));

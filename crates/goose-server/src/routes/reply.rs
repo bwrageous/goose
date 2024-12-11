@@ -395,12 +395,17 @@ mod tests {
     use goose::{
         agent::Agent,
         models::tool::Tool,
-        providers::{base::Provider, configs::OpenAiProviderConfig},
+        providers::{
+            base::Provider,
+            configs::{ModelConfig, OpenAiProviderConfig},
+        },
     };
 
     // Mock Provider implementation for testing
     #[derive(Clone)]
-    struct MockProvider;
+    struct MockProvider {
+        model_config: ModelConfig,
+    }
 
     #[async_trait::async_trait]
     impl Provider for MockProvider {
@@ -414,6 +419,10 @@ mod tests {
                 Message::assistant().with_text("Mock response"),
                 goose::providers::base::Usage::default(),
             ))
+        }
+
+        fn get_model_config(&self) -> &ModelConfig {
+            &self.model_config
         }
     }
 
@@ -493,7 +502,7 @@ mod tests {
     mod integration_tests {
         use super::*;
         use axum::{body::Body, http::Request};
-        use goose::providers::configs::ProviderConfig;
+        use goose::providers::configs::{ModelConfig, ProviderConfig};
         use std::sync::Arc;
         use tokio::sync::Mutex;
         use tower::ServiceExt;
@@ -502,16 +511,17 @@ mod tests {
         #[tokio::test]
         async fn test_ask_endpoint() {
             // Create a mock app state with mock provider
-            let mock_provider = Box::new(MockProvider);
+            let mock_model_config = ModelConfig::new("test-model".to_string());
+            let mock_provider = Box::new(MockProvider {
+                model_config: mock_model_config,
+            });
             let agent = Agent::new(mock_provider);
             let state = AppState {
                 agent: Arc::new(Mutex::new(agent)),
                 provider_config: ProviderConfig::OpenAi(OpenAiProviderConfig {
                     host: "https://api.openai.com".to_string(),
                     api_key: "test-key".to_string(),
-                    model: "test-model".to_string(),
-                    temperature: None,
-                    max_tokens: None,
+                    model: ModelConfig::new("test-model".to_string()),
                 }),
                 secret_key: "test-secret".to_string(),
             };
