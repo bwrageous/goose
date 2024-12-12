@@ -80,7 +80,7 @@ impl Agent {
         for system in &self.systems {
             for tool in system.tools() {
                 tools.push(Tool::new(
-                    format!("{}__{}", system.name(), tool.name),
+                    format!("{}_{}", system.name(), tool.name),
                     &tool.description,
                     tool.input_schema.clone(),
                 ));
@@ -397,6 +397,7 @@ impl Agent {
 mod tests {
     use super::*;
     use crate::models::message::MessageContent;
+    use crate::providers::configs::ModelConfig;
     use crate::providers::mock::MockProvider;
     use crate::systems::Resource;
     use async_trait::async_trait;
@@ -661,4 +662,54 @@ mod tests {
         assert!(status_content.contains("low_priority"));
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_context_trimming_with_custom_model_config() -> Result<()> {
+        let provider = MockProvider::with_config(
+            vec![],
+            ModelConfig::new("test_model".to_string()).with_context_limit(Some(20)),
+        );
+        let mut agent = Agent::new(Box::new(provider));
+
+        // Create a mock system with a resource that will exceed the context limit
+        let mut system = MockSystem::new("test");
+
+        // Add a resource that will exceed our tiny context limit
+        let hello_1_tokens = "hello ".repeat(1); // 1 tokens
+        let goodbye_10_tokens = "goodbye ".repeat(10); // 10 tokens
+        system.add_resource("test_resource_removed", &goodbye_10_tokens, 1);
+        system.add_resource("test_resource_expected", &hello_1_tokens, 5);
+
+        agent.add_system(Box::new(system));
+
+        // Set up test parameters
+        // 18 tokens with system + user msg in chat format
+        let system_prompt = "This is a system prompt";
+        let messages = vec![Message::user().with_text("Hi there")];
+        let tools = vec![];
+        let pending = vec![];
+
+        // Use the context limit from the model config
+        let target_limit = agent.get_context_limit();
+        assert_eq!(target_limit, 20, "Context limit should be 20");
+
+        // Call prepare_inference
+        let result = agent
+            .prepare_inference(system_prompt, &tools, &messages, &pending, target_limit)
+            .await?;
+
+        // Get the last message which should be the tool response containing status
+        let status_message = result.last().unwrap();
+        let status_content = status_message
+            .content
+            .first()
+            .and_then(|content| content.as_tool_response_text())
+            .unwrap_or_default();
+
+        // verify that "hello" is within the response, should be just under 20 tokens with "hello"
+        assert!(status_content.contains("hello"));
+
+        Ok(())
+    }
 }
+
