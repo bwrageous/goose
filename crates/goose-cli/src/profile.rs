@@ -16,6 +16,10 @@ pub struct Profile {
     pub model: String,
     #[serde(default)]
     pub additional_systems: Vec<AdditionalSystem>,
+    pub temperature: Option<f32>,
+    pub context_limit: Option<usize>,
+    pub max_tokens: Option<i32>,
+    pub estimate_factor: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,8 +75,14 @@ pub fn has_no_profiles() -> Result<bool> {
     load_profiles().map(|profiles| Ok(profiles.is_empty()))?
 }
 
-pub fn get_provider_config(provider_name: &str, model: String) -> ProviderConfig {
-    let model_config = ModelConfig::new(model);
+pub fn get_provider_config(provider_name: &str, profile: Profile) -> ProviderConfig {
+    let model_config = ModelConfig {
+        model_name: profile.model,
+        context_limit: profile.context_limit,
+        temperature: profile.temperature,
+        max_tokens: profile.max_tokens,
+        estimate_factor: profile.estimate_factor,
+    };
 
     match provider_name.to_lowercase().as_str() {
         "openai" => {
@@ -102,10 +112,7 @@ pub fn get_provider_config(provider_name: &str, model: String) -> ProviderConfig
             let host = get_keyring_secret("OLLAMA_HOST", KeyRetrievalStrategy::Both)
                 .expect("OLLAMA_HOST not available in env or the keychain\nSet an env var or rerun `goose configure`");
 
-            ProviderConfig::Ollama(OllamaProviderConfig::new(
-                host.clone(),
-                model_config.model_name,
-            ))
+            ProviderConfig::Ollama(OllamaProviderConfig::new(host.clone(), model_config))
         }
         "anthropic" => {
             let api_key = get_keyring_secret("ANTHROPIC_API_KEY", KeyRetrievalStrategy::Both)
