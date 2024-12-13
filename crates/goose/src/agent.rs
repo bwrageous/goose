@@ -69,7 +69,7 @@ impl Agent {
 
     /// Get the context limit from the provider's configuration
     fn get_context_limit(&self) -> usize {
-        self.provider.get_model_config().get_context_limit()
+        self.provider.get_model_config().context_limit()
     }
 
     /// Get all tools from all systems with proper system prefixing

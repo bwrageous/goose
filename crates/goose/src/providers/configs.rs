@@ -70,7 +70,12 @@ impl ModelConfig {
 
     /// Set an explicit context limit
     pub fn with_context_limit(mut self, limit: Option<usize>) -> Self {
-        self.context_limit = limit;
+        // Default is None and therefore DEFAULT_CONTEXT_LIMIT, only set
+        // if input is Some to allow passing through with_context_limit in
+        // configuration cases
+        if limit.is_some() {
+            self.context_limit = limit;
+        }
         self
     }
 
@@ -94,7 +99,7 @@ impl ModelConfig {
 
     /// Get the context_limit for the current model
     /// If none are defined, use the DEFAULT_CONTEXT_LIMIT
-    pub fn get_context_limit(&self) -> usize {
+    pub fn context_limit(&self) -> usize {
         self.context_limit.unwrap_or(DEFAULT_CONTEXT_LIMIT)
     }
 
@@ -104,14 +109,14 @@ impl ModelConfig {
     /// The estimate factor with the following precedence:
     /// 1. Explicit estimate_factor if provided in config
     /// 2. Default value (0.8)
-    pub fn get_estimate_factor(&self) -> f32 {
+    pub fn estimate_factor(&self) -> f32 {
         self.estimate_factor.unwrap_or(DEFAULT_ESTIMATE_FACTOR)
     }
 
     /// Get the estimated limit of the context size, this is defined as
     /// context_limit * estimate_factor
     pub fn get_estimated_limit(&self) -> usize {
-        (self.get_context_limit() as f32 * self.get_estimate_factor()) as usize
+        (self.context_limit() as f32 * self.estimate_factor()) as usize
     }
 }
 
@@ -256,29 +261,29 @@ mod tests {
         // Test explicit limit
         let config =
             ModelConfig::new("claude-3-opus".to_string()).with_context_limit(Some(150_000));
-        assert_eq!(config.get_context_limit(), 150_000);
+        assert_eq!(config.context_limit(), 150_000);
 
         // Test model-specific defaults
         let config = ModelConfig::new("claude-3-opus".to_string());
-        assert_eq!(config.get_context_limit(), 200_000);
+        assert_eq!(config.context_limit(), 200_000);
 
         let config = ModelConfig::new("gpt-4-turbo".to_string());
-        assert_eq!(config.get_context_limit(), 128_000);
+        assert_eq!(config.context_limit(), 128_000);
 
         // Test fallback to default
         let config = ModelConfig::new("unknown-model".to_string());
-        assert_eq!(config.get_context_limit(), DEFAULT_CONTEXT_LIMIT);
+        assert_eq!(config.context_limit(), DEFAULT_CONTEXT_LIMIT);
     }
 
     #[test]
     fn test_estimate_factor() {
         // Test default value
         let config = ModelConfig::new("test-model".to_string());
-        assert_eq!(config.get_estimate_factor(), DEFAULT_ESTIMATE_FACTOR);
+        assert_eq!(config.estimate_factor(), DEFAULT_ESTIMATE_FACTOR);
 
         // Test explicit value
         let config = ModelConfig::new("test-model".to_string()).with_estimate_factor(Some(0.9));
-        assert_eq!(config.get_estimate_factor(), 0.9);
+        assert_eq!(config.estimate_factor(), 0.9);
     }
 
     #[test]
@@ -289,7 +294,7 @@ mod tests {
             "claude-3-opus".to_string(),
         );
 
-        assert_eq!(config.model_config().get_context_limit(), 200_000);
+        assert_eq!(config.model_config().context_limit(), 200_000);
 
         let config = AnthropicProviderConfig::new(
             "https://api.anthropic.com".to_string(),
@@ -300,7 +305,7 @@ mod tests {
             .model_config()
             .clone()
             .with_context_limit(Some(150_000));
-        assert_eq!(model_config.get_context_limit(), 150_000);
+        assert_eq!(model_config.context_limit(), 150_000);
     }
 
     #[test]
@@ -311,7 +316,7 @@ mod tests {
             "gpt-4-turbo".to_string(),
         );
 
-        assert_eq!(config.model_config().get_context_limit(), 128_000);
+        assert_eq!(config.model_config().context_limit(), 128_000);
 
         let config = OpenAiProviderConfig::new(
             "https://api.openai.com".to_string(),
@@ -322,7 +327,7 @@ mod tests {
             .model_config()
             .clone()
             .with_context_limit(Some(150_000));
-        assert_eq!(model_config.get_context_limit(), 150_000);
+        assert_eq!(model_config.context_limit(), 150_000);
     }
 
     #[test]
