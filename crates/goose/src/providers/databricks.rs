@@ -227,6 +227,7 @@ mod tests {
                 temperature: None,
                 max_tokens: None,
                 context_limit: None,
+                estimate_factor: None,
             },
             image_format: crate::providers::utils::ImageFormat::Anthropic,
         };

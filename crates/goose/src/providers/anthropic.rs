@@ -296,6 +296,7 @@ mod tests {
                 temperature: Some(0.7),
                 max_tokens: None,
                 context_limit: Some(200_000),
+                estimate_factor: None,
             },
         };
 

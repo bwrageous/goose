@@ -14,8 +14,6 @@ use crate::systems::{Resource, System};
 use crate::token_counter::TokenCounter;
 use serde::Serialize;
 
-const ESTIMATE_FACTOR: f32 = 0.8;
-
 #[derive(Clone, Debug, Serialize)]
 struct SystemInfo {
     name: String,
@@ -318,8 +316,7 @@ impl Agent {
         let mut messages = messages.to_vec();
         let tools = self.get_prefixed_tools();
         let system_prompt = self.get_system_prompt()?;
-        let context_limit = self.get_context_limit();
-        let estimated_limit = (context_limit as f32 * ESTIMATE_FACTOR) as usize;
+        let estimated_limit = self.provider.get_model_config().get_estimated_limit();
 
         // Update conversation history for the start of the reply
         messages = self
