@@ -128,3 +128,45 @@ pub fn get_provider_config(provider_name: &str, profile: Profile) -> ProviderCon
         _ => panic!("Invalid provider name"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use goose::providers::configs::ProviderModelConfig;
+
+    use crate::test_helpers::run_profile_with_tmp_dir;
+
+    use super::*;
+
+    #[test]
+    fn test_partial_profile_config() -> Result<()> {
+        let profile = r#"
+{
+    "profile_items": {
+        "default": {
+            "provider": "databricks",
+            "model": "claude-3",
+            "temperature": 0.7,
+            "context_limit": 50000
+        }
+    }
+}
+"#;
+        run_profile_with_tmp_dir(profile, || {
+            let profiles = load_profiles()?;
+            let profile = profiles.get("default").unwrap();
+
+            assert_eq!(profile.temperature, Some(0.7));
+            assert_eq!(profile.context_limit, Some(50_000));
+            assert_eq!(profile.max_tokens, None);
+            assert_eq!(profile.estimate_factor, None);
+
+            let provider_config = get_provider_config(&profile.provider, profile.clone());
+
+            if let ProviderConfig::Databricks(config) = provider_config {
+                assert_eq!(config.model_config().estimate_factor(), 0.8);
+                assert_eq!(config.model_config().context_limit(), 50_000);
+            }
+            Ok(())
+        })
+    }
+}
