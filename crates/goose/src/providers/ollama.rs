@@ -1,5 +1,5 @@
 use super::base::{Provider, Usage};
-use super::configs::OllamaProviderConfig;
+use super::configs::{ModelConfig, OllamaProviderConfig, ProviderModelConfig};
 use super::utils::{
     messages_to_openai_spec, openai_response_to_message, tools_to_openai_spec, ImageFormat,
 };
@@ -108,13 +108,13 @@ impl Provider for OllamaProvider {
                 .unwrap()
                 .insert("tools".to_string(), json!(tools_spec));
         }
-        if let Some(temp) = self.config.temperature {
+        if let Some(temp) = self.config.model.temperature {
             payload
                 .as_object_mut()
                 .unwrap()
                 .insert("temperature".to_string(), json!(temp));
         }
-        if let Some(tokens) = self.config.max_tokens {
+        if let Some(tokens) = self.config.model.max_tokens {
             payload
                 .as_object_mut()
                 .unwrap()
@@ -129,12 +129,17 @@ impl Provider for OllamaProvider {
 
         Ok((message, usage))
     }
+
+    fn get_model_config(&self) -> &ModelConfig {
+        self.config.model_config()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::models::message::MessageContent;
+    use crate::providers::configs::ModelConfig;
     use serde_json::json;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -150,9 +155,12 @@ mod tests {
         // Create the OllamaProvider with the mock server's URL as the host
         let config = OllamaProviderConfig {
             host: mock_server.uri(),
-            model: OLLAMA_MODEL.to_string(),
-            temperature: None,
-            max_tokens: None,
+            model: ModelConfig {
+                model_name: OLLAMA_MODEL.to_string(),
+                temperature: None,
+                max_tokens: None,
+                context_limit: None,
+            },
         };
 
         let provider = OllamaProvider::new(config).unwrap();
@@ -286,9 +294,12 @@ mod tests {
 
         let config = OllamaProviderConfig {
             host: mock_server.uri(),
-            model: OLLAMA_MODEL.to_string(),
-            temperature: None,
-            max_tokens: None,
+            model: ModelConfig {
+                model_name: OLLAMA_MODEL.to_string(),
+                temperature: None,
+                max_tokens: None,
+                context_limit: None,
+            },
         };
 
         let provider = OllamaProvider::new(config)?;

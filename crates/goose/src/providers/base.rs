@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use super::configs::ModelConfig;
 use crate::models::message::Message;
 use crate::models::tool::Tool;
 
@@ -30,6 +31,9 @@ use async_trait::async_trait;
 /// Base trait for AI providers (OpenAI, Anthropic, etc)
 #[async_trait]
 pub trait Provider: Send + Sync {
+    /// Get the model configuration
+    fn get_model_config(&self) -> &ModelConfig;
+
     /// Generate the next message using the configured model and other parameters
     ///
     /// # Arguments
