@@ -181,8 +181,7 @@ mod tests {
         let config = OpenAiProviderConfig {
             host: mock_server.uri(),
             api_key: "test_api_key".to_string(),
-            model: ModelConfig::new("gpt-3.5-turbo".to_string())
-                .with_temperature(Some(0.7)),
+            model: ModelConfig::new("gpt-3.5-turbo".to_string()).with_temperature(Some(0.7)),
         };
 
         let provider = OpenAiProvider::new(config).unwrap();
