@@ -33,13 +33,38 @@ pub struct ModelConfig {
 
 impl ModelConfig {
     /// Create a new ModelConfig with the specified model name
+    ///
+    /// The context limit is set with the following precedence:
+    /// 1. Explicit context_limit if provided in config
+    /// 2. Model-specific default based on model name
+    /// 3. Global default (128_000) (in get_context_limit)
     pub fn new(model_name: String) -> Self {
+        let context_limit = Self::get_model_specific_limit(&model_name);
+
         Self {
             model_name,
-            context_limit: None,
+            context_limit,
             temperature: None,
             max_tokens: None,
             estimate_factor: None,
+        }
+    }
+
+    /// Get model-specific context limit based on model name
+    fn get_model_specific_limit(model_name: &str) -> Option<usize> {
+        // Implement some sensible defaults
+        match model_name {
+            // OpenAI models, https://platform.openai.com/docs/models#models-overview
+            name if name.contains("gpt-4o") => Some(128_000),
+            name if name.contains("gpt-4-turbo") => Some(128_000),
+
+            // Anthropic models, https://docs.anthropic.com/en/docs/about-claude/models
+            name if name.contains("claude-3") => Some(200_000),
+
+            // Meta Llama models, https://github.com/meta-llama/llama-models/tree/main?tab=readme-ov-file#llama-models-1
+            name if name.contains("llama3.2") => Some(128_000),
+            name if name.contains("llama3.3") => Some(128_000),
+            _ => None,
         }
     }
 
@@ -67,30 +92,10 @@ impl ModelConfig {
         self
     }
 
-    /// Get the context limit for the current model configuration
-    ///
-    /// # Returns
-    /// The context limit with the following precedence:
-    /// 1. Explicit context_limit if provided in config
-    /// 2. Model-specific default based on model name
-    /// 3. Global default (128_000) with a warning
+    /// Get the context_limit for the current model
+    /// If none are defined, use the DEFAULT_CONTEXT_LIMIT
     pub fn get_context_limit(&self) -> usize {
-        // Always prefer explicitly provided context limit
-        if let Some(limit) = self.context_limit {
-            return limit;
-        }
-
-        // Try to get model-specific default
-        if let Some(limit) = self.get_model_specific_limit() {
-            return limit;
-        }
-
-        // Fall back to global default with warning
-        //warn!(
-        //    "No specific context limit found for model '{}'. Using default limit of {}",
-        //    self.model_name, DEFAULT_CONTEXT_LIMIT
-        //);
-        DEFAULT_CONTEXT_LIMIT
+        self.context_limit.unwrap_or(DEFAULT_CONTEXT_LIMIT)
     }
 
     /// Get the estimate factor for the current model configuration
@@ -107,24 +112,6 @@ impl ModelConfig {
     /// context_limit * estimate_factor
     pub fn get_estimated_limit(&self) -> usize {
         (self.get_context_limit() as f32 * self.get_estimate_factor()) as usize
-    }
-
-    /// Get model-specific context limit based on model name
-    fn get_model_specific_limit(&self) -> Option<usize> {
-        // Implement some sensible defaults
-        match self.model_name.as_str() {
-            // OpenAI models, https://platform.openai.com/docs/models#models-overview
-            name if name.contains("gpt-4o") => Some(128_000),
-            name if name.contains("gpt-4-turbo") => Some(128_000),
-
-            // Anthropic models, https://docs.anthropic.com/en/docs/about-claude/models
-            name if name.contains("claude-3") => Some(200_000),
-
-            // Meta Llama models, https://github.com/meta-llama/llama-models/tree/main?tab=readme-ov-file#llama-models-1
-            name if name.contains("llama3.2") => Some(128_000),
-            name if name.contains("llama3.3") => Some(128_000),
-            _ => None,
-        }
     }
 }
 
