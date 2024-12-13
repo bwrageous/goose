@@ -140,7 +140,6 @@ mod tests {
     use super::*;
     use crate::models::message::MessageContent;
     use crate::providers::configs::ModelConfig;
-    use serde_json::json;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -155,13 +154,7 @@ mod tests {
         // Create the OllamaProvider with the mock server's URL as the host
         let config = OllamaProviderConfig {
             host: mock_server.uri(),
-            model: ModelConfig {
-                model_name: OLLAMA_MODEL.to_string(),
-                temperature: None,
-                max_tokens: None,
-                context_limit: None,
-                estimate_factor: None,
-            },
+            model: ModelConfig::new(OLLAMA_MODEL.to_string()),
         };
 
         let provider = OllamaProvider::new(config).unwrap();
@@ -295,13 +288,7 @@ mod tests {
 
         let config = OllamaProviderConfig {
             host: mock_server.uri(),
-            model: ModelConfig {
-                model_name: OLLAMA_MODEL.to_string(),
-                temperature: None,
-                max_tokens: None,
-                context_limit: None,
-                estimate_factor: None,
-            },
+            model: ModelConfig::new(OLLAMA_MODEL.to_string()),
         };
 
         let provider = OllamaProvider::new(config)?;

@@ -76,13 +76,11 @@ pub fn has_no_profiles() -> Result<bool> {
 }
 
 pub fn get_provider_config(provider_name: &str, profile: Profile) -> ProviderConfig {
-    let model_config = ModelConfig {
-        model_name: profile.model,
-        context_limit: profile.context_limit,
-        temperature: profile.temperature,
-        max_tokens: profile.max_tokens,
-        estimate_factor: profile.estimate_factor,
-    };
+    let model_config = ModelConfig::new(profile.model)
+        .with_context_limit(profile.context_limit)
+        .with_temperature(profile.temperature)
+        .with_max_tokens(profile.max_tokens)
+        .with_estimate_factor(profile.estimate_factor);
 
     match provider_name.to_lowercase().as_str() {
         "openai" => {

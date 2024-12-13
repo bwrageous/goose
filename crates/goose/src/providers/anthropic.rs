@@ -291,13 +291,9 @@ mod tests {
         let config = AnthropicProviderConfig {
             host: mock_server.uri(),
             api_key: "test_api_key".to_string(),
-            model: ModelConfig {
-                model_name: "claude-3-sonnet-20241022".to_string(),
-                temperature: Some(0.7),
-                max_tokens: None,
-                context_limit: Some(200_000),
-                estimate_factor: None,
-            },
+            model: ModelConfig::new("claude-3-sonnet-20241022".to_string())
+                .with_temperature(Some(0.7))
+                .with_context_limit(Some(200_000)),
         };
 
         let provider = AnthropicProvider::new(config).unwrap();

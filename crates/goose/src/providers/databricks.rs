@@ -222,13 +222,7 @@ mod tests {
         let config = DatabricksProviderConfig {
             host: mock_server.uri(),
             auth: DatabricksAuth::Token("test_token".to_string()),
-            model: ModelConfig {
-                model_name: "my-databricks-model".to_string(),
-                temperature: None,
-                max_tokens: None,
-                context_limit: None,
-                estimate_factor: None,
-            },
+            model: ModelConfig::new("my-databricks-model".to_string()),
             image_format: crate::providers::utils::ImageFormat::Anthropic,
         };
 
