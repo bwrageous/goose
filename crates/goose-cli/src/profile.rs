@@ -90,11 +90,11 @@ pub fn get_provider_config(provider_name: &str, profile: Profile) -> ProviderCon
             let api_key = get_keyring_secret("OPENAI_API_KEY", KeyRetrievalStrategy::Both)
                 .expect("OPENAI_API_KEY not available in env or the keychain\nSet an env var or rerun `goose configure`");
 
-            ProviderConfig::OpenAi(OpenAiProviderConfig::new(
-                "https://api.openai.com".to_string(),
+            ProviderConfig::OpenAi(OpenAiProviderConfig {
+                host: "https://api.openai.com".to_string(),
                 api_key,
-                model_config.model_name,
-            ))
+                model: model_config,
+            })
         }
         "databricks" => {
             let host = get_keyring_secret("DATABRICKS_HOST", KeyRetrievalStrategy::Both)
@@ -112,16 +112,19 @@ pub fn get_provider_config(provider_name: &str, profile: Profile) -> ProviderCon
             let host = get_keyring_secret("OLLAMA_HOST", KeyRetrievalStrategy::Both)
                 .expect("OLLAMA_HOST not available in env or the keychain\nSet an env var or rerun `goose configure`");
 
-            ProviderConfig::Ollama(OllamaProviderConfig::new(host.clone(), model_config))
+            ProviderConfig::Ollama(OllamaProviderConfig {
+                host,
+                model: model_config,
+            })
         }
         "anthropic" => {
             let api_key = get_keyring_secret("ANTHROPIC_API_KEY", KeyRetrievalStrategy::Both)
                 .expect("ANTHROPIC_API_KEY not available in env or the keychain\nSet an env var or rerun `goose configure`");
 
             ProviderConfig::Anthropic(AnthropicProviderConfig {
-                host: "https://api.anthropic.com".to_string(), // Default Anthropic API endpoint
+                host: "https://api.anthropic.com".to_string(),
                 api_key,
-                model_config.model_name,
+                model: model_config,
             })
         }
         _ => panic!("Invalid provider name"),
