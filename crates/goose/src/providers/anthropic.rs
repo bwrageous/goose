@@ -226,7 +226,7 @@ impl Provider for AnthropicProvider {
         }
 
         let mut payload = json!({
-            "model": self.config.model,
+            "model": self.config.model.model_name,
             "messages": anthropic_messages,
             "max_tokens": self.config.model.max_tokens.unwrap_or(4096)
         });

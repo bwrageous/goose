@@ -98,7 +98,7 @@ impl Provider for OllamaProvider {
         messages_array.extend(messages_spec);
 
         let mut payload = json!({
-            "model": self.config.model,
+            "model": self.config.model.model_name,
             "messages": messages_array
         });
 
