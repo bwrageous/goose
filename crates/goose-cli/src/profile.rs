@@ -1,8 +1,8 @@
 use anyhow::Result;
 use goose::key_manager::{get_keyring_secret, KeyRetrievalStrategy};
 use goose::providers::configs::{
-    AnthropicProviderConfig, DatabricksAuth, DatabricksProviderConfig, OllamaProviderConfig,
-    OpenAiProviderConfig, ProviderConfig,
+    AnthropicProviderConfig, DatabricksAuth, DatabricksProviderConfig, ModelConfig,
+    OllamaProviderConfig, OpenAiProviderConfig, ProviderConfig,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
