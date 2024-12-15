@@ -70,6 +70,9 @@ const createChat = (query?: string) => {
     minWidth: 530,
     minHeight: 800,
     transparent: true,
+    backgroundColor: '#00000000',
+    vibrancy: 'fullscreen-ui',
+    visualEffectState: 'active',
     useContentSize: true,
     icon: path.join(__dirname, '../images/icon'),
     webPreferences: {

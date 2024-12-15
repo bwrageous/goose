@@ -11,7 +11,9 @@ export default function Splash({ append }) {
         <GooseSplashLogo />
         <span className="ask-goose-type ml-[8px]">ask<br />goose</span>
       </div>
-      <Spacer className="mt-[10px]"></Spacer>
+      <div className="my-8">
+        <Spacer />
+      </div>
       <div
         className="w-[312px] px-16 py-4 text-14 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-prev-goose-gradient text-prev-goose-text rounded-[14px] inline-block"
         onClick={async () => {
@@ -31,4 +33,3 @@ export default function Splash({ append }) {
     </div>
   )
 }
-

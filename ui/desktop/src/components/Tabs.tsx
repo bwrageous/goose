@@ -14,7 +14,7 @@ declare module 'react' {
 // Core layout constants
 const TAB_MIN_WIDTH = 80;    // Tabs won't shrink smaller than this
 const TAB_MAX_WIDTH = 140;   // Default/maximum tab width
-const CONTAINER_PADDING = 50; // Left margin for entire tab container
+const CONTAINER_PADDING = 60; // Left margin for entire tab container
 
 // Calculate how wide each tab should be based on available space
 function calculateTabWidths(containerWidth: number, tabCount: number) {
@@ -114,7 +114,7 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
       C${curve + innerWidth - 4.9249} 0 ${curve + innerWidth} 4.92487 ${curve + innerWidth} 11
       V13
       C${curve + innerWidth} 19.0751 ${curve + innerWidth + 4.925} 24 ${curve + innerWidth + 11} 24
-      H${width + 11.5}H0H${curve - 11}
+      H${width}H0H${curve - 11}
       C${curve - 4.9249} 24 ${curve} 19.0751 ${curve} 13
       V11Z
     `;
@@ -132,7 +132,7 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
     const newChatId = chats[chats.length-1].id + 1;
     const newChat = {
       id: newChatId,
-      title: `Chat ${newChatId}`,
+      title: `Tab ${newChatId}`,
       messages: [],
     };
     setChats([...chats, newChat]);
@@ -155,11 +155,11 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
         </button>
       )}
       
-      {/* Main tabs container - includes 50px left margin */}
+      {/* Main tabs container - includes 60px left margin */}
       <div 
         ref={containerRef} 
         className={`
-          flex items-center relative pb-0 ml-[50px]
+          flex items-center relative pb-0 ml-[60px] space-x-0
           ${needsScroll ? 'overflow-x-auto hide-scrollbar' : ''}
         `}
       >
@@ -169,9 +169,10 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
             key={chat.id}
             style={{
               width: tabWidth,
-              WebkitAppRegion: 'no-drag'
+              WebkitAppRegion: 'no-drag',
+              marginRight: '-25px'  // Reduced overlap
             }}
-            className="relative flex items-center h-[32px] mr-1 cursor-pointer transition-all group"
+            className={`relative flex items-center h-[32px] cursor-pointer transition-all group outline-none`}
             onClick={() => navigateChat(chat.id)}
             onKeyDown={(e) => e.key === "Enter" && navigateChat(chat.id)}
             tabIndex={0}
@@ -190,27 +191,29 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
                 d={generatePath(tabWidth)}
                 fill={selectedChatId === chat.id ? 
                   'rgba(226, 245, 251, 0.90)' : 
-                  'rgba(254, 254, 254, 0.80);'
+                  'rgba(254, 254, 254, 0)'  // Removed background for unselected tabs
                 }
               />
             </svg>
             
               {/* Tab content container - holds title and X button */}
-              {/* Adjusted padding on the left side and reduced margin for the close button */}
-              <div className="z-10 items-center justify-between w-full m-auto text-center truncate">
-                <span className="tab-type align-middle">
+              <div className="z-10 items-center justify-between w-full m-auto text-center truncate pl-[2px]">
+                <span className="tab-type align-middle text-[#333]">
                   {chat.title}       
                   {chats.length > 1 && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeChat(chat.id);
-                      }}
-                      className="align-middle ml-[20px] w-[16px] h-[16px]"
-                      style={{ WebkitAppRegion: 'no-drag' }}
-                  >
-                      <X size={12} />
-                    </button>
+                    <>
+                      <div className="inline-block min-w-[8px]" />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeChat(chat.id);
+                        }}
+                        className="align-middle w-[16px] h-[16px]"
+                        style={{ WebkitAppRegion: 'no-drag' }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </>
                   )}
                 </span>
               </div>
@@ -219,8 +222,11 @@ export default function Tabs({ chats, selectedChatId, setSelectedChatId, setChat
 
         {/* New tab button - fixed width, positioned after last tab */}
         <button 
-          onClick={addChat}
-          className="flex items-center justify-center h-[32px] w-[32px]"
+          onClick={(e) => {
+            e.stopPropagation();
+            addChat();
+          }}
+          className="flex items-center justify-center h-[32px] w-[32px] ml-[18px] relative z-10"
           aria-label="New chat"
           style={{ WebkitAppRegion: 'no-drag' }}
         >

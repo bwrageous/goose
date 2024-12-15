@@ -3,7 +3,7 @@ import React from "react"
 function SplashPill({ content, append }) {
   return (
     <div
-      className="px-16 py-8 text-14 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-splash-pills rounded-full inline-block"
+      className="px-4 py-3 text-14 text-center text-splash-pills-text cursor-pointer bg-black/5 rounded-full inline-block w-fit whitespace-nowrap"
       onClick={async () => {
         const message = {
           content,
@@ -19,11 +19,13 @@ function SplashPill({ content, append }) {
 
 export default function SplashPills({ append }) {
   return (
-    <div className="grid grid-cols-2 gap-4 mb-[8px]">
-      <SplashPill content="Migrate code to react" append={append} />
-      <SplashPill content="Scaffold an API for data retention" append={append} />
-      <SplashPill content="List files in my CWD" append={append} />
-      <SplashPill content="Find all markdown files" append={append} />
+    <div className="p-4">
+      <div className="flex flex-wrap gap-2 justify-center">
+        <SplashPill content="Migrate code to React" append={append} />
+        <SplashPill content="Scaffold this API for data retention" append={append} />
+        <SplashPill content="Summarize my recent file changes" append={append} />
+        <SplashPill content="Find all .pdf files" append={append} />
+      </div>
     </div>
   )
 }

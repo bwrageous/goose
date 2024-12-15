@@ -67,8 +67,6 @@ function ChatContent({
 }) {
   const chat = chats.find((c: Chat) => c.id === selectedChatId);
 
-  //window.electron.logInfo('chats' + JSON.stringify(chats, null, 2));
-
   const [messageMetadata, setMessageMetadata] = useState<Record<string, string[]>>({});
 
   const {
@@ -85,7 +83,6 @@ function ChatContent({
     initialMessages: chat?.messages || [],
     onToolCall: ({ toolCall }) => {
       setStatus(`Executing tool: ${toolCall.toolName}`);
-      // Optionally handle tool call result here
     },
     onResponse: (response) => {
       if (!response.ok) {
@@ -104,10 +101,7 @@ function ChatContent({
       ];
 
       const fetchResponses = await askAi(promptTemplates);
-
       setMessageMetadata(prev => ({ ...prev, [message.id]: fetchResponses }));
-
-      console.log('All responses:', fetchResponses);
     },
   });
 
@@ -145,9 +139,7 @@ function ChatContent({
         <div className="flex">
           <MoreMenu
             className="absolute top-2 right-2"
-            onStopGoose={() => {
-              stop();
-            }}
+            onStopGoose={stop}
             onClearContext={() => {
               append({
                 id: Date.now().toString(),
@@ -216,7 +208,6 @@ export default function ChatWindow() {
   // Get initial query and history from URL parameters
   const searchParams = new URLSearchParams(window.location.search);
   const initialQuery = searchParams.get('initialQuery');
-  //window.electron.logInfo('initialQuery: ' + initialQuery);
   const historyParam = searchParams.get('history');
   const initialHistory = historyParam
     ? JSON.parse(decodeURIComponent(historyParam))
@@ -225,7 +216,7 @@ export default function ChatWindow() {
   const [chats, setChats] = useState<Chat[]>(() => {
     const firstChat = {
       id: 1,
-      title: initialQuery || 'Chat 1',
+      title: initialQuery || 'Tab 1',
       messages: initialHistory.length > 0 ? initialHistory : [],
     };
     return [firstChat];
@@ -263,7 +254,7 @@ export default function ChatWindow() {
                 selectedChatId={selectedChatId}
                 setSelectedChatId={setSelectedChatId}
                 initialQuery={initialQuery}
-                setStatus={setStatus} // Pass setStatus to ChatContent
+                setStatus={setStatus}
               />
             }
           />
