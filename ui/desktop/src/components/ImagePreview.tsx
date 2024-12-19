@@ -14,7 +14,7 @@ export default function ImagePreview({ imageData, onRemove, mode = 'preview', ad
   
   return (
     <div className="relative inline-block">
-      <div className={`${isMessageMode ? 'w-[300px]' : adaptiveHeight ? 'w-[54px] h-[54px]' : 'w-[120px] h-[120px]'} rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5`}>
+      <div className={`${isMessageMode ? 'w-[300px]' : adaptiveHeight ? 'w-[54px] h-[54px]' : 'w-[120px] h-[120px]'} rounded-[12px] overflow-hidden bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5`}>
         <div className="w-full h-full relative">
           <img
             src={imageData}

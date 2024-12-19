@@ -27,3 +27,4 @@ Cargo.lock
 # Hermit
 /.hermit/
 /bin/
+ui/desktop/.env

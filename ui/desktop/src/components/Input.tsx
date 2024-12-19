@@ -34,6 +34,7 @@ export default function Input({
 }: InputProps) {
   const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -95,50 +96,40 @@ export default function Input({
   };
 
   const createSubmitEvent = (value: string, attachments: Attachment[]) => {
-    // Debug log for attachments being sent
-    console.log('Creating submit event with attachments:', attachments);
-
-    const detail = {
-      value: value.trim(),
-      attachments: attachments.map(attachment => ({
-        ...attachment,
-        // Ensure we're passing all required fields for both types
-        ...(attachment.type === 'image' ? {
-          type: 'image',
-          src: attachment.src,
-          path: attachment.path
-        } : {
-          type: 'file',
-          name: attachment.name,
-          fileType: attachment.fileType,
-          path: attachment.path
+    return new CustomEvent('submit', {
+      detail: {
+        value: value.trim(),
+        attachments: attachments.map(attachment => ({
+          ...attachment,
+          // Ensure we're passing all required fields for both types
+          ...(attachment.type === 'image' ? {
+            type: 'image',
+            src: attachment.src,
+            path: attachment.path
+          } : {
+            type: 'file',
+            name: attachment.name,
+            fileType: attachment.fileType,
+            path: attachment.path
+          })
+        })),
+        experimental_attachments: attachments.map(attachment => {
+          if (attachment.type === 'image') {
+            return {
+              name: 'image',
+              contentType: 'image/png',
+              url: attachment.src, // Use the base64 data directly for images
+            };
+          } else {
+            return {
+              name: attachment.name || 'file',
+              contentType: attachment.fileType || 'application/octet-stream',
+              url: `file://${attachment.path}`
+            };
+          }
         })
-      })),
-      experimental_attachments: attachments.map(attachment => {
-        if (attachment.type === 'image') {
-          return {
-            name: 'image',
-            contentType: 'image/png',
-            url: attachment.src, // Use the base64 data directly for images
-          };
-        } else {
-          return {
-            name: attachment.name || 'file',
-            contentType: attachment.fileType || 'application/octet-stream',
-            url: `file://${attachment.path}`
-          };
-        }
-      })
-    };
-
-    // Debug log for the created event detail
-    console.log('Submit event detail:', {
-      value: detail.value,
-      attachmentsCount: detail.attachments?.length,
-      experimentalAttachmentsCount: detail.experimental_attachments?.length,
-    });
-
-    return new CustomEvent('submit', { detail }) as CustomSubmitEvent;
+      }
+    }) as CustomSubmitEvent;
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -207,27 +198,20 @@ export default function Input({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dropZoneRef.current) {
-      dropZoneRef.current.classList.add('drag-over');
-    }
+    setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dropZoneRef.current) {
-      dropZoneRef.current.classList.remove('drag-over');
-    }
+    setIsDragging(false);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragging(false);
     
-    if (dropZoneRef.current) {
-      dropZoneRef.current.classList.remove('drag-over');
-    }
-
     const files = Array.from(e.dataTransfer.files);
     
     for (const file of files) {
@@ -254,7 +238,7 @@ export default function Input({
           type: 'file',
           name: file.name,
           fileType: file.type || 'Unknown type',
-          path: file.path
+          path: file.path // Note: This might not be available in all browsers
         }]);
       }
     }
@@ -267,19 +251,21 @@ export default function Input({
   return (
     <div 
       ref={dropZoneRef}
-      className="flex flex-col px-[16px] py-[1rem]"
+      className="flex flex-col pl-[16px]"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {attachments.length > 0 && (
-        <AttachmentPreview
-          attachments={attachments}
-          onRemove={removeAttachment}
-          mode="preview"
-        />
+        <div>
+          <AttachmentPreview
+            attachments={attachments}
+            onRemove={removeAttachment}
+            mode="preview"
+          />
+        </div>
       )}
-      <form onSubmit={handleSubmitForm} className="flex relative h-auto pr-[68px]">
+      <form onSubmit={handleSubmitForm} className="relative flex h-[57px] pr-[68px] items-center">
         <textarea
           autoFocus
           id="dynamic-textarea"
@@ -295,8 +281,10 @@ export default function Input({
             minHeight: `${minHeight}px`,
             maxHeight: `${maxHeight}px`,
             overflowY: 'auto',
+            paddingTop: '18px',
+            paddingBottom: '18px',
           }}
-          className={`w-full outline-none border-none focus:ring-0 bg-transparent p-0 text-14 resize-none ${
+          className={`w-full outline-none border-none focus:ring-0 bg-transparent text-14 resize-none ${
             disabled ? 'cursor-not-allowed opacity-50' : ''
           }`}
         />
@@ -307,6 +295,8 @@ export default function Input({
           onClick={handleFileSelect}
           disabled={disabled}
           className={`absolute right-[40px] top-1/2 -translate-y-1/2 text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800 ${
+            isDragging ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-800' : ''
+          } ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >

@@ -8,7 +8,7 @@ interface FilePreviewTileProps {
 
 export default function FilePreviewTile({ name, fileType, onRemove }: FilePreviewTileProps) {
   return (
-    <div className="w-[200px] h-[54px] rounded-xl bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5 relative flex items-center px-3">
+    <div className="w-[200px] h-[54px] rounded-[12px] bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5 relative flex items-center px-3">
       {/* File Icon */}
       <svg
         className="w-6 h-6 text-gray-500 dark:text-gray-400 flex-shrink-0"
