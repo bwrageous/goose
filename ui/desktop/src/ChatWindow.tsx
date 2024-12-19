@@ -341,7 +341,7 @@ export default function ChatWindow() {
   window.electron.logInfo('ChatWindow loaded');
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden dark:bg-dark-window-gradient bg-window-gradient flex flex-col">
+    <div className="relative w-screen h-screen overflow-hidden flex flex-col bg-window-gradient dark:bg-dark-window-gradient">
       <div className="titlebar-drag-region" />
       {apiCredsMissing ? (
         <div className="w-full h-full">
