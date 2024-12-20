@@ -23,9 +23,9 @@ export default function AttachmentPreview({ attachments, onRemove, mode = 'previ
   const hasMixedTypes = hasImages && hasFiles;
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-row gap-2">
       {attachments.map((attachment, index) => (
-        <div key={index}>
+        <div key={index} className="flex-shrink-0">
           {attachment.type === 'image' ? (
             <ImagePreview
               imageData={attachment.src}

@@ -36,7 +36,6 @@ export default function Input({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (textAreaRef.current && !disabled) {
@@ -197,20 +196,21 @@ export default function Input({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
+    if (!disabled) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
+    
+    if (disabled) return;
     
     const files = Array.from(e.dataTransfer.files);
     
@@ -238,7 +238,7 @@ export default function Input({
           type: 'file',
           name: file.name,
           fileType: file.type || 'Unknown type',
-          path: file.path // Note: This might not be available in all browsers
+          path: file.path
         }]);
       }
     }
@@ -250,7 +250,6 @@ export default function Input({
 
   return (
     <div 
-      ref={dropZoneRef}
       className="flex flex-col pl-[16px]"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
