@@ -16,16 +16,27 @@ import { askAi } from './utils/askAI';
 import WingToWing, { Working } from './components/WingToWing';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import FlappyGoose from './components/FlappyGoose';
+import { Attachment } from './components/AttachmentPreview';
 
 interface CustomSubmitEvent extends CustomEvent {
   detail: {
     value: string;
-    image?: {
-      preview: string;
-      compressed: string;
-      path?: string;
-    };
+    attachments?: Attachment[];
+    experimental_attachments?: Array<{
+      name: string;
+      contentType: string;
+      url: string;
+    }>;
   };
+}
+
+interface ExtendedMessage extends Omit<Message, 'id'> {
+  attachments?: Attachment[];
+  experimental_attachments?: Array<{
+    name: string;
+    contentType: string;
+    url: string;
+  }>;
 }
 
 export interface Chat {
@@ -128,15 +139,22 @@ function ChatContent({
 
   const handleSubmit = (e: CustomSubmitEvent) => {
     const content = e.detail.value || '';
-    const image = e.detail.image;
+    console.log('ChatWindow: Handling submit:', {
+      content,
+      attachments: e.detail.attachments,
+      experimental: e.detail.experimental_attachments
+    });
     
-    if (content.trim() || image) {
+    if (content.trim() || e.detail.attachments?.length) {
       setLastInteractionTime(Date.now());
-      append({
+      const message: ExtendedMessage = {
         role: 'user',
         content: content,
-        image,
-      } as Message);
+        attachments: e.detail.attachments,
+        experimental_attachments: e.detail.experimental_attachments
+      };
+      console.log('ChatWindow: Appending message:', message);
+      append(message as unknown as Message);
     }
   };
 

@@ -3,12 +3,15 @@ import React from 'react';
 interface FilePreviewTileProps {
   name: string;
   fileType: string;
-  onRemove: () => void;
+  onRemove?: () => void;
+  mode?: 'preview' | 'message';
 }
 
-export default function FilePreviewTile({ name, fileType, onRemove }: FilePreviewTileProps) {
+export default function FilePreviewTile({ name, fileType, onRemove, mode = 'preview' }: FilePreviewTileProps) {
+  const isMessageMode = mode === 'message';
+  
   return (
-    <div className="w-[200px] h-[54px] rounded-[12px] bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5 relative flex items-center px-3">
+    <div className={`${isMessageMode ? 'w-[300px]' : 'w-[200px]'} h-[54px] rounded-[12px] bg-gray-100 dark:bg-gray-700 ring-1 ring-black/5 dark:ring-white/5 relative flex items-center px-3`}>
       {/* File Icon */}
       <svg
         className="w-6 h-6 text-gray-500 dark:text-gray-400 flex-shrink-0"
@@ -34,28 +37,30 @@ export default function FilePreviewTile({ name, fileType, onRemove }: FilePrevie
         </p>
       </div>
 
-      {/* Remove Button */}
-      <button
-        onClick={onRemove}
-        className="absolute top-[8px] right-[8px] w-5 h-5 rounded-full flex items-center justify-center"
-        style={{
-          backgroundColor: 'rgba(143, 142, 147, 0.9)',
-        }}
-      >
-        <svg
-          className="w-3 h-3 text-white"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          viewBox="0 0 24 24"
+      {/* Remove Button - only show in preview mode */}
+      {onRemove && !isMessageMode && (
+        <button
+          onClick={onRemove}
+          className="absolute top-[8px] right-[8px] w-5 h-5 rounded-full flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(143, 142, 147, 0.9)',
+          }}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
+          <svg
+            className="w-3 h-3 text-white"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

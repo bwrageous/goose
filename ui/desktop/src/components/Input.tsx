@@ -154,12 +154,21 @@ export default function Input({
   };
 
   const handleFileSelect = async () => {
-    const filePath = await window.electron.selectFileOrDirectory();
-    if (filePath) {
-      try {
-        const file = await window.electron.readFile(filePath);
-        
-        if (file.type.startsWith('image/')) {
+    try {
+      const filePath = await window.electron.selectFileOrDirectory();
+      if (!filePath) return;
+
+      const fileName = filePath.split('/').pop() || 'Unknown file';
+      const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
+      
+      if (isImage) {
+        try {
+          // For images, read the file as a data URL
+          const response = await fetch(`file://${filePath}`);
+          const blob = await response.blob();
+          const file = new File([blob], fileName, { type: `image/${fileExt}` });
+          
           const previewUrl = await getImageData(file);
           const compressedBase64 = await compressImage(previewUrl);
           
@@ -177,20 +186,29 @@ export default function Input({
             src: previewUrl,
             path: tempFilePath
           }]);
-        } else {
-          const fileName = filePath.split('/').pop() || 'Unknown file';
-          
+        } catch (error) {
+          console.error('Error handling image file:', error);
+          // If image handling fails, fall back to file handling
           setAttachments(prev => [...prev, {
             type: 'file',
             name: fileName,
-            fileType: file.type || 'Unknown type',
+            fileType: fileExt ? `image/${fileExt}` : 'application/octet-stream',
             path: filePath
           }]);
         }
-      } catch (error) {
-        console.error('Error handling file:', error);
+      } else {
+        // For non-image files, just use the file path and extension
+        setAttachments(prev => [...prev, {
+          type: 'file',
+          name: fileName,
+          fileType: fileExt ? `application/${fileExt}` : 'application/octet-stream',
+          path: filePath
+        }]);
       }
+      
       textAreaRef.current?.focus();
+    } catch (error) {
+      console.error('Error selecting file:', error);
     }
   };
 

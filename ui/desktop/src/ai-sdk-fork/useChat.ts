@@ -16,6 +16,7 @@ import useSWR, { KeyedMutator } from 'swr';
 import { throttle } from './throttle';
 import { getSecretKey } from '../config';
 import type { CustomSubmitEvent } from '../types/custom-event';
+import { Attachment } from '../components/AttachmentPreview';
 
 export type { CreateMessage, Message, UseChatOptions };
 

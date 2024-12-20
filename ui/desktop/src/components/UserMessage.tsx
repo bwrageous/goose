@@ -5,11 +5,6 @@ import { Attachment } from './AttachmentPreview';
 import AttachmentPreview from './AttachmentPreview';
 
 interface MessageWithAttachments extends Message {
-  image?: {
-    preview: string;
-    compressed: string;
-    path?: string;
-  };
   attachments?: Attachment[];
   experimental_attachments?: Array<{
     name: string;
@@ -19,131 +14,49 @@ interface MessageWithAttachments extends Message {
 }
 
 export default function UserMessage({ message }: { message: MessageWithAttachments }) {
-  // Debug logging for incoming message data
   console.log('UserMessage received:', {
-    hasImage: !!message.image,
-    attachmentsCount: message.attachments?.length,
-    experimentalAttachmentsCount: message.experimental_attachments?.length,
-    imagePreview: message.image?.preview?.slice(0, 50),
-    attachments: message.attachments?.map(att => ({
-      type: att.type,
-      ...(att.type === 'image' ? { srcStart: att.src?.slice(0, 50) } : { name: att.name })
-    })),
-    experimental: message.experimental_attachments?.map(att => ({
-      name: att.name,
-      contentType: att.contentType,
-      urlStart: att.url.slice(0, 50)
-    }))
+    content: message.content,
+    attachments: message.attachments,
+    experimental: message.experimental_attachments
   });
 
   // Convert all possible attachment formats to our Attachment type
   const allAttachments: Attachment[] = [];
-  
-  // Create a map to store base64 data from direct attachments
-  const base64Map = new Map<string, string>();
-  
-  // First, collect base64 data from direct attachments
+
+  // Add direct attachments first
   if (message.attachments) {
-    message.attachments.forEach(attachment => {
-      if (attachment.type === 'image' && attachment.src) {
-        // Store base64 data by both path and src
-        if (attachment.path) {
-          base64Map.set(attachment.path, attachment.src);
-        }
-        base64Map.set(attachment.src, attachment.src);
-
-        // Also add directly to allAttachments
-        allAttachments.push({
-          type: 'image',
-          src: attachment.src,
-        });
-      } else if (attachment.type === 'file') {
-        allAttachments.push({
-          type: 'file',
-          name: attachment.name || 'Unknown file',
-          fileType: attachment.fileType || 'Unknown type',
-        });
-      }
-    });
+    allAttachments.push(...message.attachments);
   }
 
-  // Handle legacy image format if we don't already have an image
-  if (message.image?.preview && !allAttachments.some(att => att.type === 'image')) {
-    console.log('Adding legacy image:', message.image.preview.slice(0, 50));
-    allAttachments.push({
-      type: 'image',
-      src: message.image.preview,
-    });
-  }
-
-  // Handle experimental_attachments
+  // Add experimental attachments if they don't already exist
   if (message.experimental_attachments) {
-    message.experimental_attachments.forEach(attachment => {
-      const isImage = attachment.contentType.startsWith('image/');
-      console.log('Processing experimental attachment:', {
-        isImage,
-        contentType: attachment.contentType,
-        urlStart: attachment.url.slice(0, 50)
-      });
+    message.experimental_attachments.forEach(exp => {
+      const isImage = exp.contentType.startsWith('image/');
+      const exists = allAttachments.some(att => 
+        (att.type === 'image' && att.src === exp.url) || 
+        (att.type === 'file' && att.name === exp.name)
+      );
 
-      if (isImage) {
-        // For images, check if we already have this image in allAttachments
-        const existingImage = allAttachments.find(att => 
-          att.type === 'image' && (
-            att.src === attachment.url ||
-            att.src === attachment.url.replace('file://', '') ||
-            att.src === `data:${attachment.contentType};base64,${attachment.url}`
-          )
-        );
-
-        if (!existingImage) {
-          // Try to find base64 data in our map
-          const base64Data = base64Map.get(attachment.url) || base64Map.get(attachment.url.replace('file://', ''));
-          
-          if (base64Data) {
-            // Use the base64 data we found
-            console.log('Using base64 data for image:', base64Data.slice(0, 50));
-            allAttachments.push({
-              type: 'image',
-              src: base64Data,
-            });
-          } else {
-            // If no base64 data found, use the URL directly
-            const url = attachment.url.startsWith('file://')
-              ? attachment.url.slice(7) // Remove file:// prefix
-              : attachment.url;
-
-            console.log('Using URL directly for image:', url.slice(0, 50));
-            allAttachments.push({
-              type: 'image',
-              src: url.startsWith('data:') 
-                ? url 
-                : `data:${attachment.contentType};base64,${url}`,
-            });
-          }
-        }
-      } else {
-        // For files, only add if we don't already have this file
-        if (!allAttachments.some(att => 
-          att.type === 'file' && 
-          att.name === attachment.name
-        )) {
-          console.log('Adding experimental file:', attachment.name);
+      if (!exists) {
+        if (isImage) {
+          allAttachments.push({
+            type: 'image',
+            src: exp.url,
+            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+          });
+        } else {
           allAttachments.push({
             type: 'file',
-            name: attachment.name || 'Unknown file',
-            fileType: attachment.contentType || 'Unknown type',
+            name: exp.name,
+            fileType: exp.contentType,
+            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
           });
         }
       }
     });
   }
 
-  // Debug log final attachments
-  console.log('Final allAttachments:', allAttachments.map(att => ({
-    type: att.type,
-    ...(att.type === 'image' ? { srcStart: att.src.slice(0, 50) } : { name: att.name })
-  })));
+  console.log('UserMessage: Final attachments:', allAttachments);
 
   return (
     <div className="flex justify-end mb-[16px]">

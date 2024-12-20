@@ -37,7 +37,8 @@ export default function AttachmentPreview({ attachments, onRemove, mode = 'previ
             <FilePreviewTile
               name={attachment.name || 'Unknown file'}
               fileType={attachment.fileType || ''}
-              onRemove={onRemove ? () => onRemove(index) : () => {}}
+              onRemove={onRemove ? () => onRemove(index) : undefined}
+              mode={mode}
             />
           )}
         </div>

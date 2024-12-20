@@ -28,5 +28,6 @@ contextBridge.exposeInMainWorld('electron', {
     if (channel === 'fatal-error') {
       ipcRenderer.removeListener(channel, callback);
     }
-  }
+  },
+  saveTemporaryImage: (base64Data) => ipcRenderer.invoke('save-temp-image', base64Data),
 });
