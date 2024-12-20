@@ -14,21 +14,28 @@ interface MessageWithAttachments extends Message {
 }
 
 export default function UserMessage({ message }: { message: MessageWithAttachments }) {
-  console.log('UserMessage received:', {
-    content: message.content,
-    attachments: message.attachments,
-    experimental: message.experimental_attachments
-  });
+  console.log('UserMessage received - content:', message.content);
+  console.log('UserMessage received - attachments:', message.attachments?.map(att => ({
+    type: att.type,
+    srcLength: att.src?.length,
+    srcStart: att.src?.substring(0, 100),
+    isBase64: att.src?.startsWith('data:image/'),
+    path: att.path
+  })));
 
-  // Convert all possible attachment formats to our Attachment type
   const allAttachments: Attachment[] = [];
 
-  // Add direct attachments first
   if (message.attachments) {
     allAttachments.push(...message.attachments);
+    console.log('UserMessage: Added direct attachments:', message.attachments.map(att => ({
+      type: att.type,
+      srcLength: att.src?.length,
+      srcStart: att.src?.substring(0, 100),
+      isBase64: att.src?.startsWith('data:image/'),
+      path: att.path
+    })));
   }
 
-  // Add experimental attachments if they don't already exist
   if (message.experimental_attachments) {
     message.experimental_attachments.forEach(exp => {
       const isImage = exp.contentType.startsWith('image/');
@@ -44,6 +51,12 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
             src: exp.url,
             path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
           });
+          console.log('UserMessage: Added experimental image:', {
+            urlLength: exp.url?.length,
+            urlStart: exp.url?.substring(0, 100),
+            isBase64: exp.url?.startsWith('data:image/'),
+            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+          });
         } else {
           allAttachments.push({
             type: 'file',
@@ -51,12 +64,23 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
             fileType: exp.contentType,
             path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
           });
+          console.log('UserMessage: Added experimental file:', {
+            name: exp.name,
+            contentType: exp.contentType,
+            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+          });
         }
       }
     });
   }
 
-  console.log('UserMessage: Final attachments:', allAttachments);
+  console.log('UserMessage: Final attachments:', allAttachments.map(att => ({
+    type: att.type,
+    srcLength: att.src?.length,
+    srcStart: att.src?.substring(0, 100),
+    isBase64: att.src?.startsWith('data:image/'),
+    path: att.path
+  })));
 
   return (
     <div className="flex justify-end mb-[16px]">

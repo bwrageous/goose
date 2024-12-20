@@ -7,17 +7,17 @@ import { Attachment } from './AttachmentPreview';
 import AttachmentPreview from './AttachmentPreview';
 import { getImageData, compressImage } from '../utils/imageUtils';
 
-interface CustomSubmitEvent extends CustomEvent {
-  detail: {
-    value: string;
-    attachments?: Attachment[];
-    experimental_attachments?: Array<{
-      name: string;
-      contentType: string;
-      url: string;
-    }>;
-  };
+interface SubmitEventDetail {
+  value: string;
+  attachments?: Attachment[];
+  experimental_attachments?: Array<{
+    name: string;
+    contentType: string;
+    url: string;
+  }>;
 }
+
+type CustomSubmitEvent = CustomEvent<SubmitEventDetail>;
 
 interface InputProps {
   handleSubmit: (e: CustomSubmitEvent) => void;
@@ -73,12 +73,24 @@ export default function Input({
         if (!blob) continue;
 
         const previewBase64 = await getImageData(blob);
+        console.log('Input: Got image data:', {
+          previewLength: previewBase64?.length,
+          previewStart: previewBase64?.substring(0, 100),
+          isBase64: previewBase64?.startsWith('data:image/')
+        });
+        
         const compressedBase64 = await compressImage(previewBase64);
+        console.log('Input: Compressed image:', {
+          compressedLength: compressedBase64?.length,
+          compressedStart: compressedBase64?.substring(0, 100),
+          isBase64: compressedBase64?.startsWith('data:image/')
+        });
         
         let filePath: string | undefined;
         try {
           if (window.electron?.saveTemporaryImage) {
             filePath = await window.electron.saveTemporaryImage(compressedBase64);
+            console.log('Input: Saved temp image:', { filePath });
           }
         } catch (error) {
           console.error('Failed to save temp image:', error);
@@ -89,13 +101,31 @@ export default function Input({
           src: previewBase64,
           path: filePath
         }]);
+        console.log('Input: Added image attachment:', {
+          type: 'image',
+          srcLength: previewBase64?.length,
+          srcStart: previewBase64?.substring(0, 100),
+          isBase64: previewBase64?.startsWith('data:image/'),
+          path: filePath
+        });
         break;
       }
     }
   };
 
-  const createSubmitEvent = (value: string, attachments: Attachment[]) => {
-    return new CustomEvent('submit', {
+  const createSubmitEvent = (value: string, attachments: Attachment[]): CustomSubmitEvent => {
+    console.log('Input: Creating submit event:', {
+      value,
+      attachmentsCount: attachments.length,
+      attachments: attachments.map(att => ({
+        type: att.type,
+        srcLength: att.src?.length,
+        srcStart: att.src?.substring(0, 100),
+        path: att.path
+      }))
+    });
+
+    return new CustomEvent<SubmitEventDetail>('submit', {
       detail: {
         value: value.trim(),
         attachments: attachments.map(attachment => ({
@@ -128,7 +158,7 @@ export default function Input({
           }
         })
       }
-    }) as CustomSubmitEvent;
+    });
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
