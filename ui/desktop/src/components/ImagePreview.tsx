@@ -33,13 +33,9 @@ export default function ImagePreview({ imageData, onRemove, mode = 'preview', ad
       <img
         src={imageData}
         alt="Preview"
-        className={`
-          w-full h-full
-          ${isMessageMode ? 'object-contain' : 'object-cover'}
-        `}
+        className="w-full h-full object-cover"
         style={{
-          maxHeight: isMessageMode ? '300px' : '100%',
-          height: isMessageMode ? 'auto' : '100%',
+          maxHeight: isMessageMode ? '300px' : undefined,
         }}
         onError={(e) => {
           console.error('ImagePreview: Image loading failed:', {
