@@ -32,6 +32,18 @@ export default function Input({
   isLoading = false,
   onStop,
 }: InputProps) {
+  // Constants for textarea dimensions
+  const TEXTAREA = {
+    MIN_HEIGHT: 47,
+    MAX_HEIGHT: 200,
+    PADDING: {
+      TOP: 14,
+      BOTTOM: 14,
+      LEFT: 16,
+      RIGHT: 92,
+    }
+  } as const;
+
   const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,15 +58,14 @@ export default function Input({
   const useAutosizeTextArea = (textAreaRef: HTMLTextAreaElement | null, value: string) => {
     useEffect(() => {
       if (textAreaRef) {
-        textAreaRef.style.height = '0px';
+        textAreaRef.style.height = 'auto';
         const scrollHeight = textAreaRef.scrollHeight;
-        textAreaRef.style.height = Math.min(scrollHeight, maxHeight) + 'px';
+        const newHeight = Math.min(Math.max(scrollHeight, TEXTAREA.MIN_HEIGHT), TEXTAREA.MAX_HEIGHT);
+        textAreaRef.style.height = `${newHeight}px`;
+        textAreaRef.style.overflowY = scrollHeight > TEXTAREA.MAX_HEIGHT ? 'auto' : 'hidden';
       }
     }, [textAreaRef, value]);
   };
-
-  const minHeight = '1rem';
-  const maxHeight = 10 * 24;
 
   useAutosizeTextArea(textAreaRef.current, value);
 
@@ -298,13 +309,13 @@ export default function Input({
 
   return (
     <div 
-      className="flex flex-col pl-[16px]"
+      className="flex flex-col"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {attachments.length > 0 && (
-        <div>
+        <div style={{ paddingLeft: `${TEXTAREA.PADDING.LEFT}px` }}>
           <AttachmentPreview
             attachments={attachments}
             onRemove={removeAttachment}
@@ -312,66 +323,84 @@ export default function Input({
           />
         </div>
       )}
-      <form onSubmit={handleSubmitForm} className="relative flex h-[57px] pr-[68px] items-center">
-        <textarea
-          autoFocus
-          id="dynamic-textarea"
-          placeholder="What should goose do?"
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          disabled={disabled}
-          ref={textAreaRef}
-          rows={1}
-          style={{
-            minHeight: `${minHeight}px`,
-            maxHeight: `${maxHeight}px`,
-            overflowY: 'auto',
-            paddingTop: '18px',
-            paddingBottom: '18px',
-          }}
-          className={`w-full outline-none border-none focus:ring-0 bg-transparent text-14 resize-none ${
-            disabled ? 'cursor-not-allowed opacity-50' : ''
-          }`}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={handleFileSelect}
-          disabled={disabled}
-          className={`absolute right-[40px] top-1/2 -translate-y-1/2 text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800 ${
-            isDragging ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-800' : ''
-          } ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          <Paperclip size={20} />
-        </Button>
-        {isLoading ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={onStop}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100"
+      <form onSubmit={handleSubmitForm} className="relative">
+        <div className="relative flex items-start min-h-[47px]">
+          <textarea
+            autoFocus
+            id="dynamic-textarea"
+            placeholder="What should goose do?"
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            disabled={disabled}
+            ref={textAreaRef}
+            rows={1}
+            style={{
+              minHeight: `${TEXTAREA.MIN_HEIGHT}px`,
+              maxHeight: `${TEXTAREA.MAX_HEIGHT}px`,
+              paddingTop: `${TEXTAREA.PADDING.TOP}px`,
+              paddingBottom: `${TEXTAREA.PADDING.BOTTOM}px`,
+              paddingLeft: `${TEXTAREA.PADDING.LEFT}px`,
+              paddingRight: `${TEXTAREA.PADDING.RIGHT}px`,
+            }}
+            className={`
+              w-full outline-none border-none focus:ring-0 bg-transparent text-14 
+              resize-none transition-all duration-200 ease-in-out
+              ${disabled ? 'cursor-not-allowed opacity-50' : ''}
+            `}
+          />
+          {/* Fixed position button container */}
+          <div 
+            className="absolute right-0 flex items-center gap-2"
+            style={{
+              paddingRight: `${TEXTAREA.PADDING.LEFT}px`,
+              height: `${TEXTAREA.MIN_HEIGHT}px`,
+              bottom: 0,
+            }}
           >
-            <Stop size={24} />
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            size="icon"
-            variant="ghost"
-            disabled={disabled || (!value.trim() && attachments.length === 0)}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800 ${
-              disabled || (!value.trim() && attachments.length === 0) ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            <Send size={24} />
-          </Button>
-        )}
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={handleFileSelect}
+              disabled={disabled}
+              className={`
+                text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 
+                dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800
+                ${isDragging ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-800' : ''}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              <Paperclip size={20} />
+            </Button>
+            {isLoading ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onStop}
+                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100"
+              >
+                <Stop size={24} />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="icon"
+                variant="ghost"
+                disabled={disabled || (!value.trim() && attachments.length === 0)}
+                className={`
+                  text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 
+                  dark:hover:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800
+                  ${disabled || (!value.trim() && attachments.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                <Send size={24} />
+              </Button>
+            )}
+          </div>
+        </div>
       </form>
     </div>
   );
