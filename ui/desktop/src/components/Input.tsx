@@ -136,21 +136,28 @@ export default function Input({
       }))
     });
 
+    // Include the file path in the message content for server processing
+    const messageContent = [
+      value.trim(),
+      ...attachments
+        .filter(att => att.type === 'file' && att.path)
+        .map(att => att.path)
+    ].join('\n');
+
     return new CustomEvent<SubmitEventDetail>('submit', {
       detail: {
-        value: value.trim(),
+        value: messageContent,
         attachments: attachments.map(attachment => ({
           ...attachment,
-          // Ensure we're passing all required fields for both types
           ...(attachment.type === 'image' ? {
             type: 'image',
             src: attachment.src,
-            path: attachment.path
+            path: attachment.path,
           } : {
             type: 'file',
             name: attachment.name,
             fileType: attachment.fileType,
-            path: attachment.path
+            path: attachment.path,
           })
         })),
         experimental_attachments: attachments.map(attachment => {
@@ -158,7 +165,7 @@ export default function Input({
             return {
               name: 'image',
               contentType: 'image/png',
-              url: attachment.src, // Use the base64 data directly for images
+              url: attachment.src,
             };
           } else {
             return {
