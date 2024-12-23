@@ -46,16 +46,19 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
 
       if (!exists) {
         if (isImage) {
+          // For images, use the full URL directly for preview and analysis
           allAttachments.push({
             type: 'image',
-            src: exp.url,
-            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+            src: exp.url,  // Keep the full URL for preview
+            path: exp.url, // Keep the same URL for reference
+            fileType: exp.contentType
           });
-          console.log('UserMessage: Added experimental image:', {
+          console.log('UserMessage: Added image attachment:', {
+            type: 'image',
             urlLength: exp.url?.length,
             urlStart: exp.url?.substring(0, 100),
             isBase64: exp.url?.startsWith('data:image/'),
-            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+            path: exp.url
           });
         } else {
           allAttachments.push({
@@ -64,7 +67,7 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
             fileType: exp.contentType,
             path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
           });
-          console.log('UserMessage: Added experimental file:', {
+          console.log('UserMessage: Added file attachment:', {
             name: exp.name,
             contentType: exp.contentType,
             path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
@@ -82,9 +85,13 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
     path: att.path
   })));
 
-  // Filter out the path from the message content if it exists, but keep the original content for server use
+  // Filter out paths and base64 data from display content, but keep for server use
   const displayContent = message.content?.split('\n')
-    .filter(line => !line.startsWith('file://') && !line.match(/^[/\\].*$/))
+    .filter(line => 
+      !line.startsWith('file://') && 
+      !line.match(/^[/\\].*$/) &&
+      !line.startsWith('data:image/')
+    )
     .join('\n');
 
   // Keep the original message content for server use
@@ -92,21 +99,23 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
 
   return (
     <div className="flex justify-end mb-[16px]">
-      <div className="flex flex-col items-end pt-4">
+      <div className="flex flex-col items-end w-[90%] pt-4">
         {allAttachments.length > 0 && (
-          <div className="mb-2">
-            <AttachmentPreview
-              attachments={allAttachments}
-              mode="message"
-            />
+          <div className="flex justify-end w-full mb-2">
+            <div className="max-w-[75%]">
+              <AttachmentPreview
+                attachments={allAttachments}
+                mode="message"
+              />
+            </div>
           </div>
         )}
         
         {displayContent && displayContent.trim() !== '' && (
-          <div className="inline-flex bg-user-bubble dark:bg-user-bubble-dark text-goose-text-light dark:text-goose-text-light-dark rounded-2xl p-4">
+          <div className="inline-flex max-w-[75%] bg-user-bubble dark:bg-user-bubble-dark text-goose-text-light dark:text-goose-text-light-dark rounded-2xl p-4">
             <MarkdownContent
               content={displayContent}
-              className="text-white"
+              className="text-white break-words"
             />
           </div>
         )}

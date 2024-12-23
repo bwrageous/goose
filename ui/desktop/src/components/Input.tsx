@@ -78,7 +78,7 @@ export default function Input({
     const items = e.clipboardData?.items;
     if (!items) return;
 
-    for (const item of items) {
+    for (const item of Array.from(items)) {
       if (item.type.indexOf('image') === 0) {
         const blob = item.getAsFile();
         if (!blob) continue;
@@ -99,7 +99,7 @@ export default function Input({
         
         let filePath: string | undefined;
         try {
-          if (window.electron?.saveTemporaryImage) {
+          if (window.electron) {
             filePath = await window.electron.saveTemporaryImage(compressedBase64);
             console.log('Input: Saved temp image:', { filePath });
           }
@@ -109,7 +109,7 @@ export default function Input({
         
         setAttachments(prev => [...prev, {
           type: 'image',
-          src: previewBase64,
+          src: previewBase64,  // Use uncompressed for preview
           path: filePath
         }]);
         console.log('Input: Added image attachment:', {
@@ -136,22 +136,22 @@ export default function Input({
       }))
     });
 
-    // Include the file path in the message content for server processing
+    // Include both text and image data for analysis
     const messageContent = [
       value.trim(),
       ...attachments
-        .filter(att => att.type === 'file' && att.path)
-        .map(att => att.path)
+        .filter(att => att.type === 'image')
+        .map(att => att.src),  // Include full image data for analysis
     ].join('\n');
 
     return new CustomEvent<SubmitEventDetail>('submit', {
       detail: {
-        value: messageContent,
+        value: messageContent,  // Contains text and image data
         attachments: attachments.map(attachment => ({
           ...attachment,
           ...(attachment.type === 'image' ? {
             type: 'image',
-            src: attachment.src,
+            src: attachment.src,  // Keep the full data URL for preview
             path: attachment.path,
           } : {
             type: 'file',
@@ -165,7 +165,7 @@ export default function Input({
             return {
               name: 'image',
               contentType: 'image/png',
-              url: attachment.src,
+              url: attachment.src,  // Use the full data URL for analysis
             };
           } else {
             return {
@@ -222,7 +222,7 @@ export default function Input({
           
           let tempFilePath: string | undefined;
           try {
-            if (window.electron?.saveTemporaryImage) {
+            if (window.electron) {
               tempFilePath = await window.electron.saveTemporaryImage(compressedBase64);
             }
           } catch (error) {
@@ -231,7 +231,7 @@ export default function Input({
 
           setAttachments(prev => [...prev, {
             type: 'image',
-            src: previewUrl,
+            src: previewUrl,  // Use uncompressed for preview
             path: tempFilePath
           }]);
         } catch (error) {
@@ -287,7 +287,7 @@ export default function Input({
         
         let tempFilePath: string | undefined;
         try {
-          if (window.electron?.saveTemporaryImage) {
+          if (window.electron) {
             tempFilePath = await window.electron.saveTemporaryImage(compressedBase64);
           }
         } catch (error) {
@@ -296,7 +296,7 @@ export default function Input({
 
         setAttachments(prev => [...prev, {
           type: 'image',
-          src: previewUrl,
+          src: previewUrl,  // Use uncompressed for preview
           path: tempFilePath
         }]);
       } else {
