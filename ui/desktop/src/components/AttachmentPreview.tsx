@@ -25,23 +25,23 @@ export default function AttachmentPreview({ attachments, onRemove, mode = 'previ
   return (
     <div className="flex flex-row gap-2">
       {attachments.map((attachment, index) => (
-        <div key={index} className="flex-shrink-0">
-          {attachment.type === 'image' ? (
-            <ImagePreview
-              imageData={attachment.src}
-              onRemove={onRemove ? () => onRemove(index) : undefined}
-              mode={mode}
-              adaptiveHeight={hasMixedTypes}
-            />
-          ) : (
-            <FilePreviewTile
-              name={attachment.name || 'Unknown file'}
-              fileType={attachment.fileType || ''}
-              onRemove={onRemove ? () => onRemove(index) : undefined}
-              mode={mode}
-            />
-          )}
-        </div>
+        attachment.type === 'image' ? (
+          <ImagePreview
+            key={index}
+            imageData={attachment.src}
+            onRemove={onRemove ? () => onRemove(index) : undefined}
+            mode={mode}
+            adaptiveHeight={hasMixedTypes}
+          />
+        ) : (
+          <FilePreviewTile
+            key={index}
+            name={attachment.name || 'Unknown file'}
+            fileType={attachment.fileType || ''}
+            onRemove={onRemove ? () => onRemove(index) : undefined}
+            mode={mode}
+          />
+        )
       ))}
     </div>
   );

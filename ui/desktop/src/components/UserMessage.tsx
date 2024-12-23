@@ -91,27 +91,25 @@ export default function UserMessage({ message }: { message: MessageWithAttachmen
   const serverContent = message.content;
 
   return (
-    <div className="flex mb-[16px]">
-      <div className="w-full">
-        <div className="flex flex-col items-end" style={{ paddingLeft: '16px', paddingTop: '16px' }}>
-          {allAttachments.length > 0 && (
-            <div className="mb-2">
-              <AttachmentPreview
-                attachments={allAttachments}
-                mode="message"
-              />
-            </div>
-          )}
-          
-          {displayContent && displayContent.trim() !== '' && (
-            <div className="inline-flex bg-user-bubble dark:bg-user-bubble-dark text-goose-text-light dark:text-goose-text-light-dark rounded-2xl p-4">
-              <MarkdownContent
-                content={displayContent}
-                className="text-white"
-              />
-            </div>
-          )}
-        </div>
+    <div className="flex justify-end mb-[16px]">
+      <div className="flex flex-col items-end pt-4">
+        {allAttachments.length > 0 && (
+          <div className="mb-2">
+            <AttachmentPreview
+              attachments={allAttachments}
+              mode="message"
+            />
+          </div>
+        )}
+        
+        {displayContent && displayContent.trim() !== '' && (
+          <div className="inline-flex bg-user-bubble dark:bg-user-bubble-dark text-goose-text-light dark:text-goose-text-light-dark rounded-2xl p-4">
+            <MarkdownContent
+              content={displayContent}
+              className="text-white"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

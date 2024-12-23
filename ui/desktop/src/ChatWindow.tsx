@@ -224,59 +224,61 @@ function ChatContent({
         {messages.length === 0 ? (
           <Splash append={append} />
         ) : (
-          <ScrollArea className="flex-1 px-[10px]" id="chat-scroll-area">
-            <div className="block h-10" />
-            <div ref={(el) => {
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'end' });
-              }
-            }}>
-              {messages.map((message) => (
-                <div key={message.id}>
-                  {message.role === 'user' ? (
-                    <UserMessage message={message} />
-                  ) : (
-                    <GooseMessage
-                      message={message}
-                      messages={messages}
-                      metadata={messageMetadata[message.id]}
-                      append={append}
-                    />
-                  )}
+          <ScrollArea className="flex-1" id="chat-scroll-area">
+            <div className="px-[10px]">
+              <div className="block h-10" />
+              <div ref={(el) => {
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+              }}>
+                {messages.map((message) => (
+                  <div key={message.id}>
+                    {message.role === 'user' ? (
+                      <UserMessage message={message} />
+                    ) : (
+                      <GooseMessage
+                        message={message}
+                        messages={messages}
+                        metadata={messageMetadata[message.id]}
+                        append={append}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {isLoading && (
+                <div className="flex items-center justify-center p-4">
+                  <div onClick={() => setShowGame(true)} style={{ cursor: 'pointer' }}>
+                    <LoadingGoose />
+                  </div>
                 </div>
-              ))}
+              )}
+              {error && (
+                <div className="flex flex-col items-center justify-center p-4">
+                  <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
+                    {error.message || 'Honk! Goose experienced an error while responding'}
+                    {error.status && (
+                      <span className="ml-2">(Status: {error.status})</span>
+                    )}
+                  </div>
+                  <div
+                    className="p-4 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-prev-goose-gradient dark:bg-dark-prev-goose-gradient text-prev-goose-text dark:text-prev-goose-text-dark rounded-[14px] inline-block hover:scale-[1.02] transition-all duration-150"
+                    onClick={async () => {
+                      const lastUserMessage = messages.reduceRight((found, m) => found || (m.role === 'user' ? m : null), null);
+                      if (lastUserMessage) {
+                        append({
+                          role: 'user',
+                          content: lastUserMessage.content
+                        });
+                      }
+                    }}>
+                    Retry Last Message
+                  </div>
+                </div>
+              )}
+              <div className="block h-10" />
             </div>
-            {isLoading && (
-              <div className="flex items-center justify-center p-4">
-                <div onClick={() => setShowGame(true)} style={{ cursor: 'pointer' }}>
-                  <LoadingGoose />
-                </div>
-              </div>
-            )}
-            {error && (
-              <div className="flex flex-col items-center justify-center p-4">
-                <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
-                  {error.message || 'Honk! Goose experienced an error while responding'}
-                  {error.status && (
-                    <span className="ml-2">(Status: {error.status})</span>
-                  )}
-                </div>
-                <div
-                  className="p-4 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-prev-goose-gradient dark:bg-dark-prev-goose-gradient text-prev-goose-text dark:text-prev-goose-text-dark rounded-[14px] inline-block hover:scale-[1.02] transition-all duration-150"
-                  onClick={async () => {
-                    const lastUserMessage = messages.reduceRight((found, m) => found || (m.role === 'user' ? m : null), null);
-                    if (lastUserMessage) {
-                      append({
-                        role: 'user',
-                        content: lastUserMessage.content
-                      });
-                    }
-                  }}>
-                  Retry Last Message
-                </div>
-              </div>
-            )}
-            <div className="block h-10" />
           </ScrollArea>
         )}
 

@@ -316,7 +316,7 @@ export default function Input({
 
   return (
     <div 
-      className="flex flex-col"
+      className="flex flex-col pt-4"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
