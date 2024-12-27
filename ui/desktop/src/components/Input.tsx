@@ -6,6 +6,7 @@ import { Paperclip } from 'lucide-react';
 import { Attachment } from './AttachmentPreview';
 import AttachmentPreview from './AttachmentPreview';
 import { getImageData, compressImage } from '../utils/imageUtils';
+import type { ElectronAPI } from '../types/electron';
 
 interface SubmitEventDetail {
   value: string;
@@ -99,8 +100,9 @@ export default function Input({
         
         let filePath: string | undefined;
         try {
-          if (window.electron) {
-            filePath = await window.electron.saveTemporaryImage(compressedBase64);
+          const electron = window.electron as ElectronAPI;
+          if (electron) {
+            filePath = await electron.saveTemporaryImage(compressedBase64);
             console.log('Input: Saved temp image:', { filePath });
           }
         } catch (error) {
@@ -126,27 +128,35 @@ export default function Input({
 
   const createSubmitEvent = (value: string, attachments: Attachment[]): CustomSubmitEvent => {
     console.log('Input: Creating submit event:', {
-      value,
+      value: value.substring(0, 100) + '...',
       attachmentsCount: attachments.length,
       attachments: attachments.map(att => ({
         type: att.type,
         srcLength: att.src?.length,
         srcStart: att.src?.substring(0, 100),
+        isBase64: att.src?.startsWith('data:image/'),
         path: att.path
       }))
     });
 
-    // Include both text and image data for analysis
+    // Include text and full image data URLs for analysis
     const messageContent = [
       value.trim(),
       ...attachments
         .filter(att => att.type === 'image')
-        .map(att => att.src),  // Include full image data for analysis
+        .map(att => att.src)  // Include full data URL for analysis
     ].join('\n');
 
-    return new CustomEvent<SubmitEventDetail>('submit', {
+    console.log('Input: Prepared message content:', {
+      contentLength: messageContent.length,
+      hasImageData: attachments.some(att => att.type === 'image'),
+      imageDataCount: attachments.filter(att => att.type === 'image').length,
+      firstImagePreview: attachments.find(att => att.type === 'image')?.src?.substring(0, 100)
+    });
+
+    const submitEvent = new CustomEvent<SubmitEventDetail>('submit', {
       detail: {
-        value: messageContent,  // Contains text and image data
+        value: messageContent,
         attachments: attachments.map(attachment => ({
           ...attachment,
           ...(attachment.type === 'image' ? {
@@ -165,18 +175,32 @@ export default function Input({
             return {
               name: 'image',
               contentType: 'image/png',
-              url: attachment.src,  // Use the full data URL for analysis
+              url: attachment.src,  // Use full data URL for analysis, like screen capture
             };
           } else {
+            // Keep existing file handling
             return {
               name: attachment.name || 'file',
               contentType: attachment.fileType || 'application/octet-stream',
-              url: `file://${attachment.path}`
+              url: `file://${attachment.path}`  // Keep file:// protocol for regular files
             };
           }
         })
       }
     });
+
+    console.log('Input: Created submit event:', {
+      messageLength: submitEvent.detail.value.length,
+      attachmentsCount: submitEvent.detail.attachments?.length,
+      experimentalAttachments: submitEvent.detail.experimental_attachments?.map(att => ({
+        name: att.name,
+        contentType: att.contentType,
+        urlType: att.url.startsWith('data:image/') ? 'data-url' : 'file-path',
+        urlPreview: att.url.substring(0, 100)
+      }))
+    });
+
+    return submitEvent;
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -203,58 +227,64 @@ export default function Input({
 
   const handleFileSelect = async () => {
     try {
-      const filePath = await window.electron.selectFileOrDirectory();
-      if (!filePath) return;
+      const electron = window.electron as ElectronAPI;
+      if (electron) {
+        const filePath = await electron.selectFileOrDirectory();
+        if (!filePath) return;
 
-      const fileName = filePath.split('/').pop() || 'Unknown file';
-      const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
-      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
-      
-      if (isImage) {
-        try {
-          // For images, read the file as a data URL
-          const response = await fetch(`file://${filePath}`);
-          const blob = await response.blob();
-          const file = new File([blob], fileName, { type: `image/${fileExt}` });
-          
-          const previewUrl = await getImageData(file);
-          const compressedBase64 = await compressImage(previewUrl);
-          
-          let tempFilePath: string | undefined;
+        const fileName = filePath.split('/').pop() || 'Unknown file';
+        const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
+        
+        if (isImage) {
           try {
-            if (window.electron) {
-              tempFilePath = await window.electron.saveTemporaryImage(compressedBase64);
+            // For images, read the file as a data URL
+            const response = await fetch(`file://${filePath}`);
+            const blob = await response.blob();
+            const file = new File([blob], fileName, { type: `image/${fileExt}` });
+            
+            const previewUrl = await getImageData(file);
+            if (!previewUrl) {
+              console.error('Failed to get image data');
+              return;
             }
-          } catch (error) {
-            console.error('Failed to save temp image:', error);
-          }
+            
+            const compressedBase64 = await compressImage(previewUrl);
+            let tempFilePath: string | undefined;
+            try {
+              tempFilePath = await electron.saveTemporaryImage(compressedBase64);
+              console.log('Input: Saved temp image:', { tempFilePath });
+            } catch (error) {
+              console.error('Failed to save temp image:', error);
+            }
 
-          setAttachments(prev => [...prev, {
-            type: 'image',
-            src: previewUrl,  // Use uncompressed for preview
-            path: tempFilePath
-          }]);
-        } catch (error) {
-          console.error('Error handling image file:', error);
-          // If image handling fails, fall back to file handling
+            setAttachments(prev => [...prev, {
+              type: 'image',
+              src: previewUrl,  // Use uncompressed for preview
+              path: tempFilePath
+            }]);
+          } catch (error) {
+            console.error('Error handling image file:', error);
+            // If image handling fails, fall back to file handling
+            setAttachments(prev => [...prev, {
+              type: 'file',
+              name: fileName,
+              fileType: fileExt ? `image/${fileExt}` : 'application/octet-stream',
+              path: filePath
+            }]);
+          }
+        } else {
+          // For non-image files, just use the file path and extension
           setAttachments(prev => [...prev, {
             type: 'file',
             name: fileName,
-            fileType: fileExt ? `image/${fileExt}` : 'application/octet-stream',
+            fileType: fileExt ? `application/${fileExt}` : 'application/octet-stream',
             path: filePath
           }]);
         }
-      } else {
-        // For non-image files, just use the file path and extension
-        setAttachments(prev => [...prev, {
-          type: 'file',
-          name: fileName,
-          fileType: fileExt ? `application/${fileExt}` : 'application/octet-stream',
-          path: filePath
-        }]);
+        
+        textAreaRef.current?.focus();
       }
-      
-      textAreaRef.current?.focus();
     } catch (error) {
       console.error('Error selecting file:', error);
     }
@@ -283,29 +313,56 @@ export default function Input({
     for (const file of files) {
       if (file.type.startsWith('image/')) {
         const previewUrl = await getImageData(file);
+        console.log('Input: Got dropped image data:', {
+          previewLength: previewUrl?.length,
+          previewStart: previewUrl?.substring(0, 100),
+          isBase64: previewUrl?.startsWith('data:image/'),
+          fileType: file.type
+        });
+
         const compressedBase64 = await compressImage(previewUrl);
+        console.log('Input: Compressed dropped image:', {
+          compressedLength: compressedBase64?.length,
+          compressedStart: compressedBase64?.substring(0, 100),
+          isBase64: compressedBase64?.startsWith('data:image/')
+        });
         
         let tempFilePath: string | undefined;
         try {
-          if (window.electron) {
-            tempFilePath = await window.electron.saveTemporaryImage(compressedBase64);
+          const electron = window.electron as ElectronAPI;
+          if (electron) {
+            tempFilePath = await electron.saveTemporaryImage(compressedBase64);
+            console.log('Input: Saved dropped image:', { tempFilePath });
           }
         } catch (error) {
-          console.error('Failed to save temp image:', error);
+          console.error('Failed to save dropped image:', error);
         }
 
         setAttachments(prev => [...prev, {
           type: 'image',
-          src: previewUrl,  // Use uncompressed for preview
+          src: previewUrl,  // Use uncompressed for preview and analysis
           path: tempFilePath
         }]);
+        console.log('Input: Added dropped image attachment:', {
+          type: 'image',
+          srcLength: previewUrl?.length,
+          srcStart: previewUrl?.substring(0, 100),
+          isBase64: previewUrl?.startsWith('data:image/'),
+          path: tempFilePath
+        });
       } else {
         setAttachments(prev => [...prev, {
           type: 'file',
           name: file.name,
-          fileType: file.type || 'Unknown type',
+          fileType: file.type || 'application/octet-stream',
           path: file.path
         }]);
+        console.log('Input: Added dropped file attachment:', {
+          type: 'file',
+          name: file.name,
+          fileType: file.type,
+          path: file.path
+        });
       }
     }
   };
