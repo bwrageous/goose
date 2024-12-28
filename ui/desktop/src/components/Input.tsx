@@ -139,19 +139,25 @@ export default function Input({
       }))
     });
 
-    // Include text and full image data URLs for analysis
+    // Include text, image data URLs, and file paths for analysis
     const messageContent = [
       value.trim(),
-      ...attachments
-        .filter(att => att.type === 'image')
-        .map(att => att.src)  // Include full data URL for analysis
+      ...attachments.map(att => {
+        if (att.type === 'image') {
+          return att.src;  // Include full data URL for image analysis
+        } else {
+          return `file://${att.path}`;  // Include file path with protocol for file analysis
+        }
+      })
     ].join('\n');
 
     console.log('Input: Prepared message content:', {
       contentLength: messageContent.length,
       hasImageData: attachments.some(att => att.type === 'image'),
       imageDataCount: attachments.filter(att => att.type === 'image').length,
-      firstImagePreview: attachments.find(att => att.type === 'image')?.src?.substring(0, 100)
+      fileCount: attachments.filter(att => att.type === 'file').length,
+      firstImagePreview: attachments.find(att => att.type === 'image')?.src?.substring(0, 100),
+      filePaths: attachments.filter(att => att.type === 'file').map(att => att.path)
     });
 
     const submitEvent = new CustomEvent<SubmitEventDetail>('submit', {
@@ -175,14 +181,14 @@ export default function Input({
             return {
               name: 'image',
               contentType: 'image/png',
-              url: attachment.src,  // Use full data URL for analysis, like screen capture
+              url: attachment.src,  // Use full data URL for image analysis
             };
           } else {
-            // Keep existing file handling
+            // For files, use file:// protocol with the full path
             return {
               name: attachment.name || 'file',
               contentType: attachment.fileType || 'application/octet-stream',
-              url: `file://${attachment.path}`  // Keep file:// protocol for regular files
+              url: `file://${attachment.path}`  // Ensure file:// protocol for files
             };
           }
         })
