@@ -16,6 +16,22 @@ import { askAi } from './utils/askAI';
 import WingToWing, { Working } from './components/WingToWing';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import FlappyGoose from './components/FlappyGoose';
+import { Attachment } from './components/AttachmentPreview';
+
+interface ExtendedMessage extends Omit<Message, 'id'> {
+  attachments?: Array<{
+    type: 'file';
+    name: string;
+    fileType: string;
+    path: string;
+  }>;
+}
+
+export interface Chat {
+  id: number;
+  title: string;
+  messages: Message[];
+}
 
 // update this when you want to show the welcome screen again - doesn't have to be an actual version, just anything woudln't have been seen before
 const CURRENT_VERSION = '0.0.0';
@@ -23,17 +39,6 @@ const CURRENT_VERSION = '0.0.0';
 // Get the last version from localStorage
 const getLastSeenVersion = () => localStorage.getItem('lastSeenVersion');
 const setLastSeenVersion = (version: string) => localStorage.setItem('lastSeenVersion', version);
-
-
-export interface Chat {
-  id: number;
-  title: string;
-  messages: Array<{
-    id: string;
-    role: 'function' | 'system' | 'user' | 'assistant' | 'data' | 'tool';
-    content: string;
-  }>;
-}
 
 function ChatContent({
   chats,
@@ -92,7 +97,6 @@ function ChatContent({
       const timeSinceLastInteraction = Date.now() - lastInteractionTime;
       window.electron.logInfo("last interaction:" + lastInteractionTime);
       if (timeSinceLastInteraction > 60000) { // 60000ms = 1 minute
-        
         window.electron.showNotification({title: 'Goose finished the task.', body: 'Click here to expand.'});
       }
     },
@@ -120,14 +124,23 @@ function ChatContent({
     }
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    const customEvent = e as CustomEvent;
-    const content = customEvent.detail?.value || '';
-    if (content.trim()) {
-      setLastInteractionTime(Date.now()); // Update last interaction time
+  const handleSubmit = (e: any) => {
+    const content = e.detail?.value || '';
+    const attachments = e.detail?.attachments || [];
+    
+    if (content.trim() || attachments.length > 0) {
+      setLastInteractionTime(Date.now());
+      
+      // Combine text content with file paths for Goose to analyze
+      const messageContent = [
+        content.trim(),
+        ...attachments.map(att => `file://${att.path}`)
+      ].filter(Boolean).join('\n');
+
       append({
         role: 'user',
-        content: content,
+        content: messageContent,
+        attachments: attachments  // Keep attachments for UI rendering
       });
     }
   };
@@ -198,59 +211,61 @@ function ChatContent({
         {messages.length === 0 ? (
           <Splash append={append} />
         ) : (
-          <ScrollArea className="flex-1 px-[10px]" id="chat-scroll-area">
-            <div className="block h-10" />
-            <div ref={(el) => {
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'end' });
-              }
-            }}>
-              {messages.map((message) => (
-                <div key={message.id}>
-                  {message.role === 'user' ? (
-                    <UserMessage message={message} />
-                  ) : (
-                    <GooseMessage
-                      message={message}
-                      messages={messages}
-                      metadata={messageMetadata[message.id]}
-                      append={append}
-                    />
-                  )}
+          <ScrollArea className="flex-1" id="chat-scroll-area">
+            <div className="px-[10px]">
+              <div className="block h-10" />
+              <div ref={(el) => {
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+              }}>
+                {messages.map((message) => (
+                  <div key={message.id}>
+                    {message.role === 'user' ? (
+                      <UserMessage message={message} />
+                    ) : (
+                      <GooseMessage
+                        message={message}
+                        messages={messages}
+                        metadata={messageMetadata[message.id]}
+                        append={append}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {isLoading && (
+                <div className="flex items-center justify-center p-4">
+                  <div onClick={() => setShowGame(true)} style={{ cursor: 'pointer' }}>
+                    <LoadingGoose />
+                  </div>
                 </div>
-              ))}
+              )}
+              {error && (
+                <div className="flex flex-col items-center justify-center p-4">
+                  <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
+                    {error.message || 'Honk! Goose experienced an error while responding'}
+                    {error.status && (
+                      <span className="ml-2">(Status: {error.status})</span>
+                    )}
+                  </div>
+                  <div
+                    className="p-4 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-prev-goose-gradient dark:bg-dark-prev-goose-gradient text-prev-goose-text dark:text-prev-goose-text-dark rounded-[14px] inline-block hover:scale-[1.02] transition-all duration-150"
+                    onClick={async () => {
+                      const lastUserMessage = messages.reduceRight((found, m) => found || (m.role === 'user' ? m : null), null);
+                      if (lastUserMessage) {
+                        append({
+                          role: 'user',
+                          content: lastUserMessage.content
+                        });
+                      }
+                    }}>
+                    Retry Last Message
+                  </div>
+                </div>
+              )}
+              <div className="block h-10" />
             </div>
-            {isLoading && (
-              <div className="flex items-center justify-center p-4">
-                <div onClick={() => setShowGame(true)} style={{ cursor: 'pointer' }}>
-                  <LoadingGoose />
-                </div>
-              </div>
-            )}
-            {error && (
-              <div className="flex flex-col items-center justify-center p-4">
-                <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
-                  {error.message || 'Honk! Goose experienced an error while responding'}
-                  {error.status && (
-                    <span className="ml-2">(Status: {error.status})</span>
-                  )}
-                </div>
-                <div
-                  className="p-4 text-center text-splash-pills-text whitespace-nowrap cursor-pointer bg-prev-goose-gradient dark:bg-dark-prev-goose-gradient text-prev-goose-text dark:text-prev-goose-text-dark rounded-[14px] inline-block hover:scale-[1.02] transition-all duration-150"
-                  onClick={async () => {
-                    const lastUserMessage = messages.reduceRight((found, m) => found || (m.role === 'user' ? m : null), null);
-                    if (lastUserMessage) {
-                      append({
-                        role: 'user',
-                        content: lastUserMessage.content
-                      });
-                    }
-                  }}>
-                  Retry Last Message
-                </div>
-              </div>
-            )}
-            <div className="block h-10" />
           </ScrollArea>
         )}
 
@@ -341,7 +356,7 @@ export default function ChatWindow() {
   window.electron.logInfo('ChatWindow loaded');
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden dark:bg-dark-window-gradient bg-window-gradient flex flex-col">
+    <div className="relative w-screen h-screen overflow-hidden flex flex-col bg-window-gradient dark:bg-dark-window-gradient">
       <div className="titlebar-drag-region" />
       {apiCredsMissing ? (
         <div className="w-full h-full">
@@ -379,4 +394,19 @@ export default function ChatWindow() {
       )}
     </div>
   );
+}
+
+declare global {
+  interface Window {
+    electron: {
+      hideWindow: () => void;
+      createChatWindow: (query?: string) => void;
+      showNotification: (data: { title: string; body: string }) => void;
+      logInfo: (info: string) => void;
+      getConfig: () => { apiCredsMissing: boolean };
+    };
+    appConfig: {
+      get: (key: string) => any;
+    };
+  }
 }
