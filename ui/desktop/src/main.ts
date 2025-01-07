@@ -7,9 +7,83 @@ import started from "electron-squirrel-startup";
 import log from './utils/logger';
 import { exec } from 'child_process';
 import { addRecentDir, loadRecentDirs } from './utils/recentDirs';
+import fs from 'node:fs';
+import os from 'node:os';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) app.quit();
+
+// Constants for temporary image handling
+const TEMP_DIR = path.join(os.tmpdir(), 'goose-images');
+
+// Ensure temp directory exists with proper permissions
+const ensureTempDir = () => {
+  try {
+    if (!fs.existsSync(TEMP_DIR)) {
+      fs.mkdirSync(TEMP_DIR, { 
+        recursive: true, 
+        mode: 0o777  // Full permissions for temp directory
+      });
+    }
+
+    // Verify directory permissions
+    const stats = fs.statSync(TEMP_DIR);
+    const requiredMode = 0o777;
+    
+    if ((stats.mode & 0o777) !== requiredMode) {
+      fs.chmodSync(TEMP_DIR, requiredMode);
+    }
+
+    return true;
+  } catch (error) {
+    log.error('Error in ensureTempDir:', error);
+    return false;
+  }
+};
+
+// Save temporary image with retries
+const saveTempImage = async (imageData: string, retries = 3): Promise<string> => {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Ensure temp directory exists
+      if (!ensureTempDir()) {
+        throw new Error('Failed to create temp directory');
+      }
+
+      // Process base64 data
+      const base64Data = imageData.includes('base64,')
+        ? imageData.split('base64,')[1]
+        : imageData;
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 15);
+      const filename = `${timestamp}-${random}.png`;
+      const filepath = path.join(TEMP_DIR, filename);
+
+      // Write file with proper permissions
+      await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'), { mode: 0o666 });
+
+      // Verify file was written
+      if (!fs.existsSync(filepath)) {
+        throw new Error('Failed to verify file was written');
+      }
+
+      return filepath;
+    } catch (error) {
+      lastError = error;
+      if (attempt === retries) {
+        throw new Error(`Failed to save file after ${retries} attempts: ${error.message}`);
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+
+  throw lastError;
+};
 
 declare var MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare var MAIN_WINDOW_VITE_NAME: string;
@@ -279,6 +353,11 @@ ipcMain.handle('select-file-or-directory', async () => {
   return null;
 });
 
+// Add temporary image save handler
+ipcMain.handle('save-temp-image', async (_, imageData: string) => {
+  return saveTempImage(imageData);
+});
+
 app.whenReady().then(async () => {
   // Test error feature - only enabled with GOOSE_TEST_ERROR=true
   if (process.env.GOOSE_TEST_ERROR === 'true') {
@@ -397,6 +476,18 @@ app.whenReady().then(async () => {
       exec(`xdg-open "${url}"`);
     }
   });
+});
+
+// Cleanup temporary files on app exit
+app.on('will-quit', () => {
+  try {
+    if (fs.existsSync(TEMP_DIR)) {
+      fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+      log.info('Successfully removed temp directory on exit');
+    }
+  } catch (error) {
+    log.error('Failed to cleanup temp directory on exit:', error);
+  }
 });
 
 // Quit when all windows are closed, except on macOS.

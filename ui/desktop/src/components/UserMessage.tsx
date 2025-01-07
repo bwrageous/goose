@@ -5,15 +5,21 @@ import MarkdownContent from './MarkdownContent'
 import AttachmentPreview from './AttachmentPreview'
 
 interface Attachment {
-  type: 'file';
-  name: string;
-  fileType: string;
+  type: 'file' | 'image';
+  name?: string;
+  fileType?: string;
   path: string;
+  src?: string;
 }
 
 interface Message {
   content: string;
   attachments?: Attachment[];
+  experimental_attachments?: Array<{
+    name: string;
+    contentType: string;
+    url: string;
+  }>;
 }
 
 interface UserMessageProps {
@@ -21,13 +27,52 @@ interface UserMessageProps {
 }
 
 export default function UserMessage({ message }: UserMessageProps) {
-  // Extract URLs which explicitly contain the http:// or https:// protocol
-  const urls = extractUrls(message.content, []);
+  // Process all attachments (both direct and experimental)
+  const allAttachments: Attachment[] = [];
   
-  // Filter out file:// paths from displayed content
+  // Add direct attachments
+  if (message.attachments) {
+    allAttachments.push(...message.attachments);
+  }
+  
+  // Process experimental attachments
+  if (message.experimental_attachments) {
+    message.experimental_attachments.forEach(exp => {
+      const isImage = exp.contentType.startsWith('image/');
+      const exists = allAttachments.some(att => 
+        (att.type === 'image' && att.src === exp.url) || 
+        (att.type === 'file' && att.name === exp.name)
+      );
+      
+      if (!exists) {
+        if (isImage) {
+          allAttachments.push({
+            type: 'image',
+            src: exp.url,
+            path: exp.url,
+            fileType: exp.contentType
+          });
+        } else {
+          allAttachments.push({
+            type: 'file',
+            name: exp.name,
+            fileType: exp.contentType,
+            path: exp.url.startsWith('file://') ? exp.url.slice(7) : exp.url
+          });
+        }
+      }
+    });
+  }
+  
+  // Extract URLs and filter content
+  const urls = extractUrls(message.content, []);
   const displayContent = message.content
     .split('\n')
-    .filter(line => !line.startsWith('file://'))
+    .filter(line => 
+      !line.startsWith('file://') && 
+      !line.startsWith('data:image/') &&
+      !line.match(/^\[\/\\].*$/)
+    )
     .join('\n');
   
   const hasTextContent = displayContent.trim().length > 0;
@@ -35,17 +80,17 @@ export default function UserMessage({ message }: UserMessageProps) {
   return (
     <div className="flex justify-end mb-[16px] w-full">
       <div className="flex-col max-w-[85%]">
-        {/* File preview tiles first */}
-        {message.attachments && message.attachments.length > 0 && (
+        {/* Attachment previews first */}
+        {allAttachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
-            {message.attachments.map((attachment, index) => (
+            {allAttachments.map((attachment, index) => (
               <AttachmentPreview
                 key={index}
                 type={attachment.type}
                 displayMode="message"
-                fileName={attachment.name}
+                fileName={attachment.name || ''}
                 fileType={attachment.fileType}
-                path={attachment.path}
+                src={attachment.src}
               />
             ))}
           </div>

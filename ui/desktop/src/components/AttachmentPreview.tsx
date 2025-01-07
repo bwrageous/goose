@@ -1,6 +1,7 @@
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
+import ImagePreviewTile from './ImagePreviewTile';
 
 // Utility function for class name merging
 function cn(...inputs: ClassValue[]) {
@@ -14,6 +15,7 @@ interface AttachmentPreviewProps {
   fileType?: string;
   onRemove?: () => void;
   src?: string; // For images
+  adaptiveHeight?: boolean;
 }
 
 const FilePreviewTile: React.FC<{
@@ -86,22 +88,14 @@ const FilePreviewTile: React.FC<{
   );
 };
 
-// Placeholder for ImagePreviewTile - will be implemented later
-const ImagePreviewTile: React.FC<{
-  src: string;
-  displayMode: 'input' | 'message';
-  onRemove?: () => void;
-}> = () => {
-  return <div>Image Preview Coming Soon</div>;
-};
-
 export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({
   type,
   displayMode,
   fileName,
   fileType = '',
   onRemove,
-  src
+  src,
+  adaptiveHeight = false
 }) => {
   if (type === 'file') {
     return (
@@ -114,13 +108,13 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({
     );
   }
 
-  // Image preview - will be implemented later
   if (type === 'image' && src) {
     return (
       <ImagePreviewTile
         src={src}
         displayMode={displayMode}
         onRemove={onRemove}
+        adaptiveHeight={adaptiveHeight}
       />
     );
   }

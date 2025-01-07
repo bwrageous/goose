@@ -6,7 +6,7 @@ import { Paperclip } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
 
 interface InputProps {
-  handleSubmit: (e: React.FormEvent) => void;
+  handleSubmit: (e: CustomEvent<{ value: string; attachments: Attachment[] }>) => void;
   disabled?: boolean;
   isLoading?: boolean;
   onStop?: () => void;
@@ -14,8 +14,8 @@ interface InputProps {
 
 interface Attachment {
   type: 'file' | 'image';
-  name: string;
-  fileType: string;
+  name?: string;
+  fileType?: string;
   path: string;
   src?: string;
 }
@@ -23,7 +23,10 @@ interface Attachment {
 declare global {
   interface Window {
     electron: {
+      hideWindow: () => void;
+      createChatWindow: (query?: string) => void;
       selectFileOrDirectory: () => Promise<string | null>;
+      saveTempImage: (imageData: string) => Promise<string>;
     };
   }
 }
@@ -105,7 +108,8 @@ export default function Input({
         type: isImage ? 'image' : 'file',
         name: fileName,
         fileType: fileExt,
-        path: filePath
+        path: filePath,
+        ...(isImage && { src: `file://${filePath}` })
       };
 
       setAttachments(prev => [...prev, newAttachment]);
@@ -117,9 +121,49 @@ export default function Input({
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    // Only handle paste if it's targeting our textarea
+    if (e.target !== textAreaRef.current) {
+      return;
+    }
+
+    const items = Array.from(e.clipboardData.items);
+    let handled = false;
+
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        handled = true;
+        const blob = item.getAsFile();
+        if (!blob) continue;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const imageData = e.target?.result as string;
+          try {
+            const tempPath = await window.electron.saveTempImage(imageData);
+            setAttachments(prev => [...prev, {
+              type: 'image',
+              name: 'Pasted image',
+              fileType: blob.type.split('/')[1] || 'png',
+              path: tempPath,
+              src: imageData
+            }]);
+          } catch (error) {
+            console.error('Failed to save pasted image:', error);
+          }
+        };
+        reader.readAsDataURL(blob);
+      }
+    }
+
+    // Only prevent default if we handled an image
+    if (handled) {
+      e.preventDefault();
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    // Update paperclip button state
     const paperclipButton = document.querySelector('.paperclip-button');
     if (paperclipButton) {
       paperclipButton.classList.add('hover:bg-indigo-100', 'dark:hover:bg-indigo-800');
@@ -149,11 +193,12 @@ export default function Input({
         const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
 
-        const newAttachment = {
+        const newAttachment: Attachment = {
           type: isImage ? 'image' : 'file',
           name: fileName,
           fileType: fileExt,
-          path: filePath
+          path: filePath,
+          ...(isImage && { src: `file://${filePath}` })
         };
 
         setAttachments(prev => [...prev, newAttachment]);
@@ -171,16 +216,17 @@ export default function Input({
     >
       {/* Attachments Preview Area */}
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-[16px] mb-2">
+        <div className="flex flex-wrap gap-2 px-[16px] pt-[16px] mb-2">
           {attachments.map((attachment, index) => (
             <AttachmentPreview
               key={index}
               type={attachment.type}
               displayMode="input"
-              fileName={attachment.name}
+              fileName={attachment.name || ''}
               fileType={attachment.fileType}
               onRemove={() => handleRemoveAttachment(index)}
               src={attachment.src}
+              adaptiveHeight={attachments.length > 1}
             />
           ))}
         </div>
@@ -195,6 +241,7 @@ export default function Input({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           disabled={disabled}
           ref={textAreaRef}
           rows={1}
